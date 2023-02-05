@@ -6,25 +6,14 @@ import (
 	"chess/game"
 	"fmt"
 	"math"
+	"sync"
 )
 
 func BestMove(g *game.GameState) *game.Move {
-	start := &node{
-		Move: &game.Move{
-			State: g,
-		},
-		Score:  0,
-		Leaves: []*node{},
-	}
-	c := &context{
-		History: map[board]float64{},
-	}
-	res := alphaBeta(c, start, 5, minusInf, plusInf, !g.BlackTurn, eval.Evaluate)
-	metrics(start, res)
-	return best(start, !g.BlackTurn)
+	return concAlphaBeta(g, 5, eval.Evaluate)
 }
 
-func best(n *node, isMax bool) *game.Move {
+func best(n *node, isMax bool) (*game.Move, float64) {
 	if isMax {
 		var output *game.Move
 		var bestScore float64 = minusInf
@@ -34,7 +23,8 @@ func best(n *node, isMax bool) *game.Move {
 				bestScore = leaf.Score
 			}
 		}
-		return output
+		n.Score = bestScore
+		return output, bestScore
 	}
 	var output *game.Move
 	var bestScore float64 = plusInf
@@ -44,7 +34,8 @@ func best(n *node, isMax bool) *game.Move {
 			bestScore = leaf.Score
 		}
 	}
-	return output
+	n.Score = bestScore
+	return output, bestScore
 }
 
 func close(a, b, threshold float64) bool {
@@ -73,13 +64,60 @@ func _m(start *node) float64 {
 	for _, leaf := range start.Leaves {
 		currNumLeafs++
 		leafAvg := _m(leaf)
-		avg = append(avg, leafAvg)
+		if leafAvg != 0 {
+			avg = append(avg, leafAvg)
+		}
 	}
 	var sum float64 = float64(currNumLeafs)
 	for _, a := range avg {
 		sum += a
 	}
 	return sum / float64(len(avg)+1)
+}
+
+func concAlphaBeta(g *game.GameState, depth int, eval Evaluator) *game.Move {
+	start := &node{
+		Move: &game.Move{
+			State: g,
+		},
+		Score:  0,
+		Leaves: []*node{},
+	}
+	c := &context{
+		History: map[board]float64{},
+		MaxSize: 1000,
+	}
+
+	// if we have multiple, we set the alpha, then paralelize
+	mg := movegen.NewMoveGenerator(g)
+
+	n := mg.Next()
+	if n == nil {
+		return nil
+	}
+	leaf := newNode(n)
+	start.AddLeaf(leaf)
+	alpha := alphaBeta(c, leaf, depth-1, minusInf, plusInf, g.BlackTurn, eval)
+
+	n = mg.Next()
+	var wg sync.WaitGroup
+	for n != nil {
+		wg.Add(1)
+		leaf := newNode(n)
+		start.AddLeaf(leaf)
+		go func() {
+			defer wg.Done()
+			alphaBeta(c, leaf, depth-1, alpha, plusInf, g.BlackTurn, eval)
+		}()
+		n = mg.Next()
+	}
+
+	wg.Wait()
+
+	bestMove, bestScore := best(start, !g.BlackTurn)
+	metrics(start, bestScore)
+
+	return bestMove
 }
 
 type node struct {
@@ -105,7 +143,10 @@ type board struct {
 }
 
 type context struct {
-	History map[board]float64
+	History  map[board]float64
+	CurrSize int
+	MaxSize  int
+	sync.Mutex
 }
 
 func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, eval Evaluator) float64 {
@@ -114,7 +155,9 @@ func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, 
 		return n.Score
 	}
 	b := board{n.Move.State.Board, n.Move.State.BlackTurn}
+	c.Mutex.Lock()
 	v, ok := c.History[b]
+	c.Mutex.Unlock()
 	if ok {
 		return v
 	}
@@ -139,7 +182,11 @@ func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, 
 			mv = mg.Next()
 		}
 		n.Score = maxEval
-		c.History[b] = maxEval
+		c.Mutex.Lock()
+		if c.CurrSize < c.MaxSize {
+			c.History[b] = maxEval
+		}
+		c.Mutex.Unlock()
 		return maxEval
 	}
 	minEval := plusInf
@@ -161,7 +208,11 @@ func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, 
 		mv = mg.Next()
 	}
 	n.Score = minEval
-	c.History[b] = minEval
+	c.Mutex.Lock()
+	if c.CurrSize < c.MaxSize {
+		c.History[b] = minEval
+	}
+	c.Mutex.Unlock()
 	return minEval
 }
 

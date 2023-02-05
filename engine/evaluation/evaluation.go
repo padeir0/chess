@@ -53,18 +53,21 @@ func getPieceWeight(g *game.GameState, pinfo *pieceInfo) float64 {
 	} else if pinfo.Piece.IsBishopLike() {
 		pieceWeight = bishopWeight(g, pinfo)
 	} else if pinfo.Piece.IsHorsieLike() {
-		pieceWeight = 3
+		pieceWeight = 3 + horsieMobility(g, pinfo)
 	} else if pinfo.Piece.IsPawnLike() {
 		pieceWeight = pawnWeight(g, pinfo)
 	} else {
 		panic("invalid piece: " + pinfo.Piece.String())
 	}
-	return pieceWeight + defMod(g, pinfo.Pos, pinfo.IsBlack)
+	defmod := defMod(g, pinfo.Pos, pinfo.IsBlack)
+	return pieceWeight + defmod
 }
 
 func isEndgame(g *game.GameState) bool {
 	return g.TotalValuablePieces <= 8
 }
+
+const defmod float64 = 0.025
 
 func defMod(g *game.GameState, pos game.Position, isBlack bool) float64 {
 	// see if position is attacked by their own pieces
@@ -82,43 +85,43 @@ func defMod(g *game.GameState, pos game.Position, isBlack bool) float64 {
 			pc.BlackMovedRook, pc.WhiteMovedRook:
 			if pos.Column == slot.Pos.Column ||
 				pos.Row == slot.Pos.Row {
-				output += 0.1
+				output += defmod
 			}
 		case pc.WhiteBishop, pc.BlackBishop:
 			if Abs(pos.Column-slot.Pos.Column) ==
 				Abs(pos.Row-slot.Pos.Row) {
-				output += 0.1
+				output += defmod
 			}
 		case pc.BlackQueen, pc.WhiteQueen:
 			if Abs(pos.Column-slot.Pos.Column) ==
 				Abs(pos.Row-slot.Pos.Row) ||
 				pos.Column == slot.Pos.Column ||
 				pos.Row == slot.Pos.Row {
-				output += 0.1
+				output += defmod
 			}
 		case pc.BlackPawn, pc.BlackPassantPawn, pc.BlackMovedPawn:
 			if pos.Row-slot.Pos.Row == 1 &&
 				Abs(pos.Column-slot.Pos.Column) == 1 {
-				output += 0.1
+				output += defmod
 			}
 		case pc.WhitePawn, pc.WhitePassantPawn, pc.WhiteMovedPawn:
 			if pos.Row-slot.Pos.Row == -1 &&
 				Abs(pos.Column-slot.Pos.Column) == 1 {
-				output += 0.1
+				output += defmod
 			}
 		case pc.WhiteHorsie, pc.BlackHorsie:
 			if !((Abs(slot.Pos.Column-pos.Column) == 2 &&
 				Abs(slot.Pos.Row-pos.Row) == 1) ||
 				(Abs(slot.Pos.Column-pos.Column) == 1 &&
 					Abs(slot.Pos.Row-pos.Row) == 2)) {
-				output += 0.1
+				output += defmod
 			}
 		case pc.BlackKing, pc.WhiteKing, pc.BlackCastleKing, pc.WhiteCastleKing:
 			ColDiff := slot.Pos.Column - pos.Column
 			RowDiff := slot.Pos.Row - pos.Row
 			if !(((ColDiff == 1) || (ColDiff == 0) || (ColDiff == -1)) &&
 				((RowDiff == 1) || (RowDiff == 0) || (RowDiff == -1))) {
-				output += 0.1
+				output += defmod
 			}
 		}
 	}
@@ -137,9 +140,9 @@ func protectionWeight(g *game.GameState, pinfo *pieceInfo) float64 {
 		}
 		piece := g.Board.AtPos(pos)
 		if piece.IsQueenLike() {
-			weight += 0.3
-		} else if piece.IsRookLike() {
 			weight += 0.2
+		} else if piece.IsRookLike() {
+			weight += 0.15
 		} else {
 			weight += 0.1
 		}
@@ -147,11 +150,49 @@ func protectionWeight(g *game.GameState, pinfo *pieceInfo) float64 {
 	return weight
 }
 
-func bishopWeight(g *game.GameState, pinfo *pieceInfo) float64 {
-	if hasBishopPair(g, pinfo) {
-		return 3.5
+func horsieMobility(g *game.GameState, pinfo *pieceInfo) float64 {
+	var mobMod float64 = 0
+	for _, offset := range game.HorsieOffsets {
+		pos := game.Position{
+			Column: pinfo.Pos.Column + offset.Column,
+			Row:    pinfo.Pos.Row + offset.Row,
+		}
+		if pos.IsInvalid() {
+			continue
+		}
+		piece := g.Board.AtPos(pos)
+		if piece == pc.Empty {
+			mobMod += 0.05
+		} else if piece.IsBlack() != pinfo.IsBlack {
+			mobMod += 0.1
+		}
 	}
-	return 3
+	return mobMod
+}
+
+func bishopWeight(g *game.GameState, pinfo *pieceInfo) float64 {
+	bishopMob := bishopMobility(g, pinfo)
+	if hasBishopPair(g, pinfo) {
+		return 3.5 + bishopMob
+	}
+	return 3 + bishopMob
+}
+
+func bishopMobility(g *game.GameState, pinfo *pieceInfo) float64 {
+	var mobMod float64 = 0
+	for _, offset := range game.BishopOffsets {
+		pos := game.Position{
+			Column: pinfo.Pos.Column + offset.Column,
+			Row:    pinfo.Pos.Row + offset.Row,
+		}
+		if pos.IsInvalid() {
+			continue
+		}
+		if g.Board.AtPos(pos) == pc.Empty {
+			mobMod += 0.01
+		}
+	}
+	return mobMod
 }
 
 // inneficient but will do for now
@@ -210,7 +251,7 @@ func pawnColValue(g *game.GameState, pinfo *pieceInfo) float64 {
 	if isEndgame(g) {
 		switch pinfo.Pos.Column {
 		case 7, 0:
-			return 1.25
+			return 1.2
 		case 6, 1:
 			return 1.1
 		case 5, 2:
@@ -221,7 +262,7 @@ func pawnColValue(g *game.GameState, pinfo *pieceInfo) float64 {
 	}
 	switch pinfo.Pos.Column {
 	case 7, 0:
-		return 0.9
+		return 0.8
 	case 6, 1:
 		return 0.95
 	case 5, 2:
@@ -234,9 +275,9 @@ func pawnColValue(g *game.GameState, pinfo *pieceInfo) float64 {
 
 func pawnRowMultiplier(g *game.GameState, pinfo *pieceInfo) float64 {
 	if pinfo.IsBlack {
-		return 1.5 * (float64(pinfo.Pos.Row) / 8)
+		return 1.25 * (float64(pinfo.Pos.Row) / 4)
 	}
-	return 1.5 * (float64(7-pinfo.Pos.Row) / 8)
+	return 1.25 * (float64(7-pinfo.Pos.Row) / 4)
 }
 
 func Abs32(a int32) int32 {

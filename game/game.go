@@ -228,12 +228,13 @@ func MoveToHighlight(in []*Move) []Highlight {
 
 func (this *GameState) Copy() *GameState {
 	output := &GameState{
-		BlackTurn:         this.BlackTurn,
-		Board:             this.Board,
-		BlackKingPosition: this.BlackKingPosition,
-		WhiteKingPosition: this.WhiteKingPosition,
-		BlackPieces:       make([]Slot, len(this.BlackPieces)),
-		WhitePieces:       make([]Slot, len(this.WhitePieces)),
+		BlackTurn:           this.BlackTurn,
+		Board:               this.Board,
+		BlackKingPosition:   this.BlackKingPosition,
+		WhiteKingPosition:   this.WhiteKingPosition,
+		BlackPieces:         make([]Slot, len(this.BlackPieces)),
+		WhitePieces:         make([]Slot, len(this.WhitePieces)),
+		TotalValuablePieces: this.TotalValuablePieces,
 	}
 	for i, slot := range this.BlackPieces {
 		if slot.IsInvalid() {
@@ -881,7 +882,19 @@ func genKingMoves(pos Position) []Position {
 	return output
 }
 
-var horsieOffsets = []Position{
+var BishopOffsets = []Position{
+	{-1, -1} /*   */, {-1, 1},
+
+	{1, -1} /*    */, {1, 1},
+}
+
+var RookOffsets = []Position{
+	/*    */ {-1, 0}, /*    */
+	{0, -1} /*    */, {0, 1},
+	/*    */ {1, 0}, /*    */
+}
+
+var HorsieOffsets = []Position{
 	{-2, -1}, {-2, +1},
 	{-1, -2}, {-1, +2},
 	{+1, -2}, {+1, +2},
@@ -890,7 +903,7 @@ var horsieOffsets = []Position{
 
 func genHorsieMoves(pos Position) []Position {
 	output := []Position{}
-	for _, offset := range horsieOffsets {
+	for _, offset := range HorsieOffsets {
 		newpos := Position{
 			Column: pos.Column + offset.Column,
 			Row:    pos.Row + offset.Row,
