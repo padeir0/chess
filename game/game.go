@@ -852,7 +852,7 @@ func PseudoLegalMoves(Pos Position, piece pc.Piece) []Position {
 	case pc.BlackQueen, pc.WhiteQueen:
 		return genQueenMoves(Pos)
 	case pc.BlackBishop, pc.WhiteBishop:
-		return genBishopMoves(Pos)
+		return GenBishopMoves(Pos)
 	case pc.BlackRook, pc.WhiteRook,
 		pc.BlackMovedRook, pc.WhiteMovedRook:
 		return genRookMoves(Pos)
@@ -934,7 +934,7 @@ func genRookMoves(pos Position) []Position {
 	return output
 }
 
-func genBishopMoves(pos Position) []Position {
+func GenBishopMoves(pos Position) []Position {
 	firstDiagPos := Position{Row: 0, Column: 0}
 	diff := pos.Row - pos.Column
 	if diff < 0 {
@@ -973,7 +973,7 @@ func genBishopMoves(pos Position) []Position {
 }
 
 func genQueenMoves(pos Position) []Position {
-	return append(genBishopMoves(pos), genRookMoves(pos)...)
+	return append(GenBishopMoves(pos), genRookMoves(pos)...)
 }
 
 func genBlackPawnMoves(pos Position) []Position {

@@ -10,7 +10,7 @@ import (
 )
 
 func BestMove(g *game.GameState) *game.Move {
-	return concAlphaBeta(g, 5, eval.Evaluate)
+	return concAlphaBeta(g, 4, eval.Evaluate)
 }
 
 func best(n *node, isMax bool) (*game.Move, float64) {
@@ -46,11 +46,11 @@ var totNodes = 0
 
 func metrics(ctx *context, start *node, best float64) {
 	avg := _m(start)
-	for _, leaf := range start.Leaves {
-		if close(leaf.Score, best, 0.5) {
-			fmt.Printf("%v%v: %.4f\n", leaf.Move.From, leaf.Move.To, leaf.Score)
-		}
-	}
+	//for _, leaf := range start.Leaves {
+	//	if close(leaf.Score, best, 0.5) {
+	//		fmt.Printf("%v%v: %.4f\n", leaf.Move.From, leaf.Move.To, leaf.Score)
+	//	}
+	//}
 	fmt.Printf("Average breadth: %v\n", avg)
 	fmt.Printf("Total Nodes: %v\n", totNodes)
 	fmt.Printf("History Size: %v\n", len(ctx.History))
@@ -86,10 +86,10 @@ func concAlphaBeta(g *game.GameState, depth int, eval Evaluator) *game.Move {
 	}
 	c := &context{
 		History: map[board]float64{},
-		MaxSize: 10000,
+		MaxSize: 5000,
 	}
 
-	// if we have multiple, we set the alpha, then paralelize
+	// we set the alpha, then paralelize
 	mg := movegen.NewMoveGenerator(g)
 
 	n := mg.Next()
@@ -150,6 +150,8 @@ type context struct {
 	sync.Mutex
 }
 
+const window = 0.3
+
 func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, eval Evaluator) float64 {
 	if depth == 0 {
 		n.Score = eval(n.Move.State)
@@ -168,16 +170,16 @@ func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, 
 		mv := mg.Next()
 		for mv != nil {
 			leaf := newNode(mv)
-			n.AddLeaf(leaf)
 
 			score := alphaBeta(c, leaf, depth-1, alpha, beta, false, eval)
 			if score > maxEval {
+				n.AddLeaf(leaf)
 				maxEval = score
 			}
 			if score > alpha {
 				alpha = score
 			}
-			if beta <= alpha {
+			if beta+window < alpha {
 				break
 			}
 			mv = mg.Next()
@@ -195,16 +197,16 @@ func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, 
 	mv := mg.Next()
 	for mv != nil {
 		leaf := newNode(mv)
-		n.AddLeaf(leaf)
 
 		score := alphaBeta(c, leaf, depth-1, alpha, beta, true, eval)
 		if score < minEval {
+			n.AddLeaf(leaf)
 			minEval = score
 		}
 		if score < beta {
 			beta = score
 		}
-		if beta <= alpha {
+		if beta+window < alpha {
 			break
 		}
 		mv = mg.Next()

@@ -4,6 +4,7 @@ import (
 	xcmd "chess/command"
 	ck "chess/command/commandkind"
 	engine "chess/engine"
+	"chess/engine/evaluation"
 	game "chess/game"
 	pr "chess/game/promotion"
 
@@ -103,6 +104,7 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 			start := time.Now()
 			enginePlay(cli)
 			fmt.Printf("%v\n", time.Since(start))
+			evaluation.EvaluatePrint(cli.Curr)
 		}
 		if isOver(cli) {
 			return
