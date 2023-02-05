@@ -47,7 +47,7 @@ func getPieceWeight(g *game.GameState, pinfo *pieceInfo) float64 {
 	}
 	var pieceWeight float64 = 0
 	if pinfo.Piece.IsQueenLike() {
-		pieceWeight = 15
+		pieceWeight = 30
 	} else if pinfo.Piece.IsRookLike() {
 		pieceWeight = 7
 	} else if pinfo.Piece.IsBishopLike() {
@@ -189,7 +189,7 @@ func bishopMobility(g *game.GameState, pinfo *pieceInfo) float64 {
 			continue
 		}
 		if g.Board.AtPos(pos) == pc.Empty {
-			mobMod += 0.01
+			mobMod += 0.05
 		}
 	}
 	return mobMod
@@ -266,9 +266,9 @@ func pawnColValue(g *game.GameState, pinfo *pieceInfo) float64 {
 	case 6, 1:
 		return 0.95
 	case 5, 2:
-		return 1
-	case 4, 3:
 		return 1.1
+	case 4, 3:
+		return 1.2
 	}
 	return 1
 }

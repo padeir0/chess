@@ -44,7 +44,7 @@ func close(a, b, threshold float64) bool {
 
 var totNodes = 0
 
-func metrics(start *node, best float64) {
+func metrics(ctx *context, start *node, best float64) {
 	avg := _m(start)
 	for _, leaf := range start.Leaves {
 		if close(leaf.Score, best, 0.5) {
@@ -53,6 +53,7 @@ func metrics(start *node, best float64) {
 	}
 	fmt.Printf("Average breadth: %v\n", avg)
 	fmt.Printf("Total Nodes: %v\n", totNodes)
+	fmt.Printf("History Size: %v\n", len(ctx.History))
 }
 
 func _m(start *node) float64 {
@@ -85,7 +86,7 @@ func concAlphaBeta(g *game.GameState, depth int, eval Evaluator) *game.Move {
 	}
 	c := &context{
 		History: map[board]float64{},
-		MaxSize: 1000,
+		MaxSize: 10000,
 	}
 
 	// if we have multiple, we set the alpha, then paralelize
@@ -115,7 +116,7 @@ func concAlphaBeta(g *game.GameState, depth int, eval Evaluator) *game.Move {
 	wg.Wait()
 
 	bestMove, bestScore := best(start, !g.BlackTurn)
-	metrics(start, bestScore)
+	metrics(c, start, bestScore)
 
 	return bestMove
 }
@@ -185,6 +186,7 @@ func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, 
 		c.Mutex.Lock()
 		if c.CurrSize < c.MaxSize {
 			c.History[b] = maxEval
+			c.CurrSize++
 		}
 		c.Mutex.Unlock()
 		return maxEval
@@ -211,6 +213,7 @@ func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, 
 	c.Mutex.Lock()
 	if c.CurrSize < c.MaxSize {
 		c.History[b] = minEval
+		c.CurrSize++
 	}
 	c.Mutex.Unlock()
 	return minEval
