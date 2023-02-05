@@ -394,15 +394,9 @@ func identifier(st *lexer) *lexeme {
 	cmdKind := ck.InvalidCommandKind
 
 	switch selected {
-	case "next":
-		tp = _cmd
-		cmdKind = ck.Next
 	case "move":
 		tp = _cmd
 		cmdKind = ck.Move
-	case "undo":
-		tp = _cmd
-		cmdKind = ck.Undo
 	case "save":
 		tp = _cmd
 		cmdKind = ck.Save
@@ -418,6 +412,12 @@ func identifier(st *lexer) *lexeme {
 	case "clear":
 		tp = _cmd
 		cmdKind = ck.Clear
+	case "profile":
+		tp = _cmd
+		cmdKind = ck.Profile
+	case "stopprofile":
+		tp = _cmd
+		cmdKind = ck.StopProfile
 	case "no", "NO":
 		tp = _cmd
 		cmdKind = ck.NO
@@ -502,10 +502,6 @@ func consume(st *lexer) (*lexeme, *Error) {
 
 func checkCmd(cmd *Command) *Error {
 	switch cmd.Kind {
-	case ck.Next:
-		return checkCmdNumberOnly(cmd)
-	case ck.Undo:
-		return checkCmdSingleNumber(cmd)
 	case ck.Save:
 		return checkCmdSave(cmd)
 	case ck.Restore:
@@ -514,7 +510,9 @@ func checkCmd(cmd *Command) *Error {
 		return checkShow(cmd)
 	case ck.Move:
 		return checkMove(cmd)
-	case ck.Quit, ck.Clear, ck.NO:
+	case ck.Profile:
+		return checkCmdProfile(cmd)
+	case ck.Quit, ck.Clear, ck.NO, ck.StopProfile:
 		return nil
 	}
 	panic("invalid command")
@@ -544,6 +542,13 @@ func checkCmdSave(cmd *Command) *Error {
 	return checkErr(cmd.Kind.String() + " <label>")
 }
 
+func checkCmdProfile(cmd *Command) *Error {
+	if len(cmd.Operands) == 1 && cmd.Operands[0].IsLabel() {
+		return nil
+	}
+	return checkErr(cmd.Kind.String() + " <label>")
+}
+
 func checkCmdRestore(cmd *Command) *Error {
 	if len(cmd.Operands) == 0 {
 		return nil
@@ -554,22 +559,6 @@ func checkCmdRestore(cmd *Command) *Error {
 	return checkErr(cmd.Kind.String() + " <label>")
 }
 
-func checkCmdSingleNumber(cmd *Command) *Error {
-	if len(cmd.Operands) == 1 && cmd.Operands[0].IsLabel() {
-		return nil
-	}
-	return checkErr(cmd.Kind.String() + " <number>")
-}
-
-func checkCmdNumberOnly(cmd *Command) *Error {
-	for _, op := range cmd.Operands {
-		if !op.IsNumber() {
-			return checkErr(cmd.Kind.String() + " <number> <number> ...")
-		}
-	}
-	return nil
-}
-
 func checkShow(cmd *Command) *Error {
 	if len(cmd.Operands) == 0 {
 		return nil
@@ -577,7 +566,7 @@ func checkShow(cmd *Command) *Error {
 	if len(cmd.Operands) > 1 ||
 		!cmd.Operands[0].IsLabel() ||
 		!isValidShow(*cmd.Operands[0].Label) {
-		return checkErr("show [arracked/defended/vulnerable]")
+		return checkErr("show [moves]")
 	}
 	return nil
 }
@@ -588,7 +577,7 @@ func checkErr(layout string) *Error {
 
 func isValidShow(s string) bool {
 	switch s {
-	case "attacked", "defended", "vulnerable":
+	case "moves":
 		return true
 	}
 	return false

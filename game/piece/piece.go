@@ -107,25 +107,25 @@ const (
 	InvalidPiece Piece = iota
 	Empty
 
-	WhiteQueen
-	WhiteCastleKing
-	WhiteKing
+	WhiteMovedPawn
+	WhitePawn
+	WhitePassantPawn
+	WhiteHorsie
 	WhiteBishop
 	WhiteRook
 	WhiteMovedRook
-	WhiteHorsie
-	WhitePawn
-	WhitePassantPawn
-	WhiteMovedPawn
+	WhiteQueen
+	WhiteKing
+	WhiteCastleKing
 
-	BlackQueen
-	BlackCastleKing
-	BlackKing
+	BlackMovedPawn
+	BlackPawn
+	BlackPassantPawn
+	BlackHorsie
 	BlackBishop
 	BlackRook
 	BlackMovedRook
-	BlackHorsie
-	BlackPawn
-	BlackPassantPawn
-	BlackMovedPawn
+	BlackQueen
+	BlackKing
+	BlackCastleKing
 )

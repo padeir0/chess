@@ -1,39 +1,31 @@
 package main
 
 import (
-	"bufio"
 	xcmd "chess/command"
 	ck "chess/command/commandkind"
 	engine "chess/engine"
 	game "chess/game"
 	pr "chess/game/promotion"
+
+	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime/pprof"
+	"time"
 )
 
-type MoveHist struct {
-	Cmd     *xcmd.Command
-	Capture *game.Slot
-}
-
-type cliState struct {
-	Moves []MoveHist
-	Saved map[string]game.GameState
-	Curr  *game.GameState
-}
-
-func newCliState() *cliState {
-	return &cliState{
-		Moves: []MoveHist{},
-		Saved: map[string]game.GameState{},
-		Curr:  game.InitialGame(),
-	}
-}
+var asBlack = flag.Bool("black", false, "play as black")
 
 func main() {
+	flag.Parse()
 	cli := newCliState()
+	if !cli.ComputerIsBlack {
+		enginePlay(cli)
+	}
 	for {
+		fmt.Print(">")
 		reader := bufio.NewReader(os.Stdin)
 		cmdstr, err := reader.ReadString('\n')
 		if err != nil {
@@ -45,6 +37,21 @@ func main() {
 			continue
 		}
 		eval(cli, cmd)
+	}
+}
+
+type cliState struct {
+	Saved map[string]game.GameState
+	Curr  *game.GameState
+
+	ComputerIsBlack bool
+}
+
+func newCliState() *cliState {
+	return &cliState{
+		Saved:           map[string]game.GameState{},
+		Curr:            game.InitialGame(),
+		ComputerIsBlack: !*asBlack,
 	}
 }
 
@@ -85,42 +92,37 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 			return
 		}
 		cli.Curr = &saved
-	case ck.Next:
-		warn("unimplemented")
 	case ck.Move:
-		ok, piece := evalMove(cli, cmd)
-		if ok {
-			cli.Moves = append(cli.Moves, MoveHist{cmd, piece})
-		}
-		PrintMoves(cli.Curr)
-	case ck.Undo: // needs to know captured pieces
-		warn("unimplemented")
-		//evalUndo(cli, cmd)
-	case ck.Show:
-		if len(cmd.Operands) == 0 {
-			fmt.Println(cli.Curr.Board.String())
+		if isOver(cli) {
 			return
 		}
-		warn("unimplemented")
-	}
-}
-
-func evalUndo(cli *cliState, cmd *xcmd.Command) {
-	if len(cmd.Operands) == 1 {
-		// multiple undos
-	}
-}
-
-func undoOne(cl *cliState) {
-	// all evaluated moves are possible
-	for _, move := range cl.Moves {
-		// promotion
-		if len(move.Cmd.Operands) == 3 {
+		if evalMove(cli, cmd) {
+			if isOver(cli) {
+				return
+			}
+			start := time.Now()
+			enginePlay(cli)
+			fmt.Printf("%v\n", time.Since(start))
 		}
+		if isOver(cli) {
+			return
+		}
+	case ck.Profile:
+		file := *cmd.Operands[0].Label
+		f, err := os.Create(file)
+		if err != nil {
+			warn(err)
+			os.Exit(0)
+		}
+		pprof.StartCPUProfile(f)
+	case ck.StopProfile:
+		pprof.StopCPUProfile()
+	case ck.Show:
+		evalShow(cli, cmd)
 	}
 }
 
-func evalMove(cli *cliState, cmd *xcmd.Command) (bool, *game.Slot) {
+func evalMove(cli *cliState, cmd *xcmd.Command) bool {
 	from := *cmd.Operands[0].Position
 	to := *cmd.Operands[1].Position
 	if len(cmd.Operands) == 3 {
@@ -128,21 +130,21 @@ func evalMove(cli *cliState, cmd *xcmd.Command) (bool, *game.Slot) {
 		prom := convertLabelToProm(promTxt)
 		if prom == pr.InvalidPromotion {
 			warn("invalid promotion")
-			return false, nil
+			return false
 		}
-		ok, capture := cli.Curr.Move(from, to, prom)
+		ok, _ := cli.Curr.Move(from, to, prom)
 		if !ok {
 			warn("invalid move")
-			return false, nil
+			return false
 		}
-		return true, capture
+		return true
 	}
-	ok, capture := cli.Curr.Move(from, to, pr.InvalidPromotion)
+	ok, _ := cli.Curr.Move(from, to, pr.InvalidPromotion)
 	if !ok {
 		warn("invalid move")
-		return false, nil
+		return false
 	}
-	return true, capture
+	return true
 }
 
 func convertLabelToProm(label string) pr.Promotion {
@@ -159,14 +161,38 @@ func convertLabelToProm(label string) pr.Promotion {
 	return pr.InvalidPromotion
 }
 
-func PrintMoves(g *game.GameState) {
-	moves := engine.GenerateMoves(g)
-	output := []string{}
-	for _, move := range moves {
-		str := move.From.String() + move.To.String()
-		output = append(output, str)
+func evalShow(cli *cliState, cmd *xcmd.Command) {
+	if len(cmd.Operands) == 0 {
+		fmt.Println(cli.Curr.Board.String())
+		return
 	}
-	fmt.Println("BlackTurn: ", g.BlackTurn)
-	fmt.Println(len(output), "moves:")
-	fmt.Println(output)
+	whatToShow := *cmd.Operands[0].Label
+	switch whatToShow {
+	case "moves":
+		fmt.Println(cli.Curr.ShowMoves())
+	default:
+		warn("unimplemented")
+	}
+}
+
+func enginePlay(cli *cliState) {
+	mv := engine.BestMove(cli.Curr)
+	if mv == nil {
+		warn("engine made no moves!!")
+		os.Exit(0)
+	}
+	ok, _ := cli.Curr.Move(mv.From, mv.To, pr.Queen)
+	if !ok {
+		warn("engine made an illegal move!!")
+		os.Exit(0)
+	}
+}
+
+func isOver(cli *cliState) bool {
+	over, msg := cli.Curr.IsOver()
+	if over {
+		fmt.Println(msg)
+		return true
+	}
+	return false
 }

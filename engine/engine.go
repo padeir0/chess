@@ -1,177 +1,170 @@
 package engine
 
 import (
+	eval "chess/engine/evaluation"
+	movegen "chess/engine/movegen"
 	"chess/game"
-	pc "chess/game/piece"
-	pr "chess/game/promotion"
+	"fmt"
+	"math"
 )
 
-type Move struct {
-	From  game.Position
-	To    game.Position
-	State *game.GameState
+func BestMove(g *game.GameState) *game.Move {
+	start := &node{
+		Move: &game.Move{
+			State: g,
+		},
+		Score:  0,
+		Leaves: []*node{},
+	}
+	c := &context{
+		History: map[board]float64{},
+	}
+	res := alphaBeta(c, start, 5, minusInf, plusInf, !g.BlackTurn, eval.Evaluate)
+	metrics(start, res)
+	return best(start, !g.BlackTurn)
 }
 
-func GenerateMoves(g *game.GameState) []*Move {
-	slots := g.WhitePieces
-	if g.BlackTurn {
-		slots = g.BlackPieces
-	}
-	outStates := []*Move{}
-	newGS := g.Copy()
-	for _, slot := range slots {
-		moves := pseudoLegalMoves(slot.Position, slot.Piece)
-		for _, to := range moves {
-			ok, _ := newGS.Move(slot.Position, to, pr.Queen)
-			if ok {
-				move := &Move{
-					From:  slot.Position,
-					To:    to,
-					State: newGS,
-				}
-				outStates = append(outStates, move)
-				newGS = g.Copy()
+func best(n *node, isMax bool) *game.Move {
+	if isMax {
+		var output *game.Move
+		var bestScore float64 = minusInf
+		for _, leaf := range n.Leaves {
+			if leaf.Score > bestScore {
+				output = leaf.Move
+				bestScore = leaf.Score
 			}
 		}
+		return output
 	}
-	return outStates
-}
-
-func pseudoLegalMoves(Pos game.Position, piece pc.Piece) []game.Position {
-	switch piece {
-	case pc.BlackCastleKing, pc.WhiteCastleKing, pc.BlackKing, pc.WhiteKing:
-		return genKingMoves(Pos)
-	case pc.BlackHorsie, pc.WhiteHorsie:
-		return genHorsieMoves(Pos)
-	case pc.BlackQueen, pc.WhiteQueen:
-		return genQueenMoves(Pos)
-	case pc.BlackBishop, pc.WhiteBishop:
-		return genBishopMoves(Pos)
-	case pc.BlackRook, pc.WhiteRook,
-		pc.BlackMovedRook, pc.WhiteMovedRook:
-		return genRookMoves(Pos)
-	case pc.BlackPassantPawn, pc.BlackMovedPawn, pc.BlackPawn:
-		return genBlackPawnMoves(Pos)
-	case pc.WhitePassantPawn, pc.WhiteMovedPawn, pc.WhitePawn:
-		return genWhitePawnMoves(Pos)
-	}
-	return nil
-}
-
-var kingOffsets = []game.Position{
-	{-1, -1}, {-1, 0}, {-1, 1},
-	{0, -1} /*    */, {0, 1},
-	{1, -1}, {1, 0}, {1, 1},
-}
-
-func genKingMoves(pos game.Position) []game.Position {
-	output := []game.Position{}
-	for _, offset := range kingOffsets {
-		newpos := game.Position{
-			Column: pos.Column + offset.Column,
-			Row:    pos.Row + offset.Row,
+	var output *game.Move
+	var bestScore float64 = plusInf
+	for _, leaf := range n.Leaves {
+		if leaf.Score < bestScore {
+			output = leaf.Move
+			bestScore = leaf.Score
 		}
-		output = append(output, newpos)
 	}
 	return output
 }
 
-var horsieOffsets = []game.Position{
-	{-2, -1}, {-2, +1},
-	{-1, -2}, {-1, +2},
-	{+1, -2}, {+1, +2},
-	{+2, -1}, {+2, +1},
+func close(a, b, threshold float64) bool {
+	return math.Abs(a-b) <= threshold
 }
 
-func genHorsieMoves(pos game.Position) []game.Position {
-	output := []game.Position{}
-	for _, offset := range horsieOffsets {
-		newpos := game.Position{
-			Column: pos.Column + offset.Column,
-			Row:    pos.Row + offset.Row,
+var totNodes = 0
+
+func metrics(start *node, best float64) {
+	avg := _m(start)
+	for _, leaf := range start.Leaves {
+		if close(leaf.Score, best, 0.5) {
+			fmt.Printf("%v%v: %.4f\n", leaf.Move.From, leaf.Move.To, leaf.Score)
 		}
-		output = append(output, newpos)
 	}
-	return output
+	fmt.Printf("Average breadth: %v\n", avg)
+	fmt.Printf("Total Nodes: %v\n", totNodes)
 }
 
-func genRookMoves(pos game.Position) []game.Position {
-	output := []game.Position{}
-	for i := 0; i <= 7; i++ {
-		if i != pos.Row {
-			newPos := game.Position{
-				Row:    i,
-				Column: pos.Column,
+func _m(start *node) float64 {
+	if start != nil {
+		totNodes++
+	}
+	currNumLeafs := 0
+	avg := []float64{}
+	for _, leaf := range start.Leaves {
+		currNumLeafs++
+		leafAvg := _m(leaf)
+		avg = append(avg, leafAvg)
+	}
+	var sum float64 = float64(currNumLeafs)
+	for _, a := range avg {
+		sum += a
+	}
+	return sum / float64(len(avg)+1)
+}
+
+type node struct {
+	Move *game.Move
+
+	Score float64
+
+	Leaves []*node
+}
+
+func (this *node) AddLeaf(n *node) {
+	this.Leaves = append(this.Leaves, n)
+}
+
+var minusInf float64 = -(1 << 16)
+var plusInf float64 = (1 << 16)
+
+type Evaluator func(g *game.GameState) float64
+
+type board struct {
+	b       game.Board
+	isBlack bool
+}
+
+type context struct {
+	History map[board]float64
+}
+
+func alphaBeta(c *context, n *node, depth int, alpha, beta float64, IsMax bool, eval Evaluator) float64 {
+	if depth == 0 {
+		n.Score = eval(n.Move.State)
+		return n.Score
+	}
+	b := board{n.Move.State.Board, n.Move.State.BlackTurn}
+	v, ok := c.History[b]
+	if ok {
+		return v
+	}
+	mg := movegen.NewMoveGenerator(n.Move.State)
+	if IsMax {
+		maxEval := minusInf
+		mv := mg.Next()
+		for mv != nil {
+			leaf := newNode(mv)
+			n.AddLeaf(leaf)
+
+			score := alphaBeta(c, leaf, depth-1, alpha, beta, false, eval)
+			if score > maxEval {
+				maxEval = score
 			}
-			output = append(output, newPos)
-		}
-		if i != pos.Column {
-			newPos := game.Position{
-				Row:    pos.Row,
-				Column: i,
+			if score > alpha {
+				alpha = score
 			}
-			output = append(output, newPos)
+			if beta <= alpha {
+				break
+			}
+			mv = mg.Next()
 		}
+		n.Score = maxEval
+		c.History[b] = maxEval
+		return maxEval
 	}
-	return output
+	minEval := plusInf
+	mv := mg.Next()
+	for mv != nil {
+		leaf := newNode(mv)
+		n.AddLeaf(leaf)
+
+		score := alphaBeta(c, leaf, depth-1, alpha, beta, true, eval)
+		if score < minEval {
+			minEval = score
+		}
+		if score < beta {
+			beta = score
+		}
+		if beta <= alpha {
+			break
+		}
+		mv = mg.Next()
+	}
+	n.Score = minEval
+	c.History[b] = minEval
+	return minEval
 }
 
-func genBishopMoves(pos game.Position) []game.Position {
-	firstDiagPos := game.Position{Row: 0, Column: 0}
-	diff := pos.Row - pos.Column
-	if diff < 0 {
-		firstDiagPos = game.Position{Row: -diff, Column: 0}
-	} else {
-		firstDiagPos = game.Position{Row: 0, Column: diff}
-	}
-
-	secDiagPos := game.Position{Row: 0, Column: 7}
-	if diff < 0 {
-		secDiagPos = game.Position{Row: 7 + diff, Column: 7}
-	} else {
-		secDiagPos = game.Position{Row: 7, Column: diff}
-	}
-
-	output := []game.Position{}
-	for i := 0; i < 7; i++ {
-		firstDiag := game.Position{
-			Row:    firstDiagPos.Row - i,
-			Column: firstDiagPos.Column + i,
-		}
-		if firstDiag.IsValid() && firstDiag != pos {
-			output = append(output, firstDiag)
-		}
-
-		secDiag := game.Position{
-			Row:    secDiagPos.Row - i,
-			Column: secDiagPos.Column - i,
-		}
-		if secDiag.IsValid() && secDiag != pos {
-			output = append(output, secDiag)
-		}
-	}
-
-	return output
-}
-
-func genQueenMoves(pos game.Position) []game.Position {
-	return append(genBishopMoves(pos), genRookMoves(pos)...)
-}
-
-func genBlackPawnMoves(pos game.Position) []game.Position {
-	return []game.Position{
-		{Row: pos.Row + 2, Column: pos.Column},
-		{Row: pos.Row + 1, Column: pos.Column},
-		{Row: pos.Row + 1, Column: pos.Column - 1},
-		{Row: pos.Row + 1, Column: pos.Column + 1},
-	}
-}
-
-func genWhitePawnMoves(pos game.Position) []game.Position {
-	return []game.Position{
-		{Row: pos.Row - 2, Column: pos.Column},
-		{Row: pos.Row - 1, Column: pos.Column},
-		{Row: pos.Row - 1, Column: pos.Column - 1},
-		{Row: pos.Row - 1, Column: pos.Column + 1},
-	}
+func newNode(mv *game.Move) *node {
+	return &node{Move: mv, Leaves: []*node{}}
 }

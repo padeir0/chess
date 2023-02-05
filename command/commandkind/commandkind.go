@@ -4,12 +4,8 @@ type CommandKind int
 
 func (this CommandKind) String() string {
 	switch this {
-	case Next:
-		return "next"
 	case Move:
 		return "move"
-	case Undo:
-		return "undo"
 	case Save:
 		return "save"
 	case Restore:
@@ -20,19 +16,24 @@ func (this CommandKind) String() string {
 		return "quit"
 	case Clear:
 		return "clear"
+	case Profile:
+		return "profile"
+	case StopProfile:
+		return "stopprofile"
 	}
 	return "???"
 }
 
 const (
 	InvalidCommandKind CommandKind = iota
-	Next
 	Move
-	Undo
 	Save
 	Restore
 	Show
 	Quit
 	Clear
 	NO
+
+	Profile
+	StopProfile
 )
