@@ -10,7 +10,7 @@ import (
 )
 
 func BestMove(g *game.GameState) *game.Move {
-	return concAlphaBeta(g, 4, eval.Evaluate)
+	return concAlphaBeta(g, 5, eval.Evaluate)
 }
 
 func best(n *node, isMax bool) (*game.Move, float64) {
