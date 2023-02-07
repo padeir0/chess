@@ -11,6 +11,7 @@ func ConsumeAll(mg *MoveGenerator) []*game.Move {
 	mv := mg.Next()
 	for mv != nil {
 		output = append(output, mv)
+		mg.g.UnmakeMove(mv)
 		mv = mg.Next()
 	}
 	return output
@@ -43,9 +44,9 @@ type MoveGenerator struct {
 }
 
 func (this *MoveGenerator) Next() *game.Move {
-	newGS := this.g.Copy()
 	for this.currSlot < len(*this.slots) {
 		slot := (*this.slots)[this.currSlot]
+		piece := slot.Piece // Move() may alter the slot
 		if slot.Piece == pc.Empty {
 			this.pseudoLegal = nil
 			this.currSlot++
@@ -62,12 +63,13 @@ func (this *MoveGenerator) Next() *game.Move {
 		for this.currPseudo < len(this.pseudoLegal.To) {
 			to := this.pseudoLegal.To[this.currPseudo]
 			this.currPseudo++
-			ok, _ := newGS.Move(this.pseudoLegal.From, to, pr.Queen)
+			ok, capture := this.g.Move(this.pseudoLegal.From, to, pr.Queen)
 			if ok {
 				move := &game.Move{
-					From:  this.pseudoLegal.From,
-					To:    to,
-					State: newGS,
+					Piece:   piece,
+					From:    this.pseudoLegal.From,
+					To:      to,
+					Capture: capture,
 				}
 				return move
 			}

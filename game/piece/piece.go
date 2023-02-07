@@ -6,7 +6,7 @@ func (this Piece) IsWhite() bool {
 	switch this {
 	case WhiteQueen, WhiteKing, WhiteCastleKing, WhiteBishop,
 		WhiteRook, WhiteMovedRook, WhiteHorsie, WhitePawn,
-		WhiteMovedPawn, WhitePassantPawn:
+		WhiteMovedPawn:
 		return true
 	}
 	return false
@@ -16,7 +16,7 @@ func (this Piece) IsBlack() bool {
 	switch this {
 	case BlackQueen, BlackKing, BlackCastleKing, BlackBishop,
 		BlackRook, BlackMovedRook, BlackHorsie, BlackPawn,
-		BlackMovedPawn, BlackPassantPawn:
+		BlackMovedPawn:
 		return true
 	}
 	return false
@@ -25,8 +25,7 @@ func (this Piece) IsBlack() bool {
 func (this Piece) IsPawnLike() bool {
 	switch this {
 	case BlackPawn, WhitePawn,
-		BlackMovedPawn, WhiteMovedPawn,
-		BlackPassantPawn, WhitePassantPawn:
+		BlackMovedPawn, WhiteMovedPawn:
 		return true
 	}
 	return false
@@ -85,6 +84,8 @@ func (this Piece) String() string {
 		return "W"
 	case WhiteCastleKing, BlackCastleKing:
 		return "K"
+	case WhiteKing, BlackKing:
+		return "Ḱ"
 	case WhiteBishop, BlackBishop:
 		return "B"
 	case WhiteRook, BlackRook:
@@ -95,10 +96,8 @@ func (this Piece) String() string {
 		return "H"
 	case WhitePawn, BlackPawn:
 		return "P"
-	case WhitePassantPawn, BlackPassantPawn:
-		return "Ṕ"
 	case WhiteMovedPawn, BlackMovedPawn:
-		return "p"
+		return "Ṕ"
 	}
 	panic("should not be reached")
 }
@@ -109,7 +108,6 @@ const (
 
 	WhiteMovedPawn
 	WhitePawn
-	WhitePassantPawn
 	WhiteHorsie
 	WhiteBishop
 	WhiteRook
@@ -120,7 +118,6 @@ const (
 
 	BlackMovedPawn
 	BlackPawn
-	BlackPassantPawn
 	BlackHorsie
 	BlackBishop
 	BlackRook

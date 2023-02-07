@@ -3,8 +3,8 @@ package main
 import (
 	xcmd "chess/command"
 	ck "chess/command/commandkind"
-	engine "chess/engine"
-	"chess/engine/evaluation"
+	engine0 "chess/engine0"
+	engine1 "chess/engine1"
 	game "chess/game"
 	pr "chess/game/promotion"
 
@@ -104,7 +104,6 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 			start := time.Now()
 			enginePlay(cli)
 			fmt.Printf("%v\n", time.Since(start))
-			evaluation.EvaluatePrint(cli.Curr)
 		}
 		if isOver(cli) {
 			return
@@ -117,6 +116,8 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 			os.Exit(0)
 		}
 		pprof.StartCPUProfile(f)
+	case ck.SelfPlay:
+		doSelfPlay(cli)
 	case ck.StopProfile:
 		pprof.StopCPUProfile()
 	case ck.Show:
@@ -178,15 +179,15 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 }
 
 func enginePlay(cli *cliState) {
-	mv := engine.BestMove(cli.Curr)
+	mv := engine1.BestMove(cli.Curr)
 	if mv == nil {
 		warn("engine made no moves!!")
-		os.Exit(0)
+		return
 	}
 	ok, _ := cli.Curr.Move(mv.From, mv.To, pr.Queen)
 	if !ok {
-		warn("engine made an illegal move!!")
-		os.Exit(0)
+		warn("engine made an illegal move!!", mv)
+		return
 	}
 }
 
@@ -197,4 +198,39 @@ func isOver(cli *cliState) bool {
 		return true
 	}
 	return false
+}
+
+func doSelfPlay(cli *cliState) {
+	for i := 0; i < 200; i++ {
+		if cli.Curr.BlackTurn {
+			fmt.Println("engine ZERO -------------")
+			start := time.Now()
+			mv := engine0.BestMove(cli.Curr)
+			if mv == nil {
+				warn("black made no moves!!")
+				return
+			}
+			ok, _ := cli.Curr.Move(mv.From, mv.To, pr.Queen)
+			if !ok {
+				warn("black made an illegal move!!")
+				return
+			}
+			fmt.Printf("black: %v\n", time.Since(start))
+		} else {
+			fmt.Println("engine ONE --------------")
+			start := time.Now()
+			mv := engine1.BestMove(cli.Curr)
+			if mv == nil {
+				warn("white made no moves!!")
+				return
+			}
+			ok, _ := cli.Curr.Move(mv.From, mv.To, pr.Queen)
+			if !ok {
+				warn("white made an illegal move!!", mv.From, mv.To)
+				return
+			}
+			fmt.Printf("white: %v\n", time.Since(start))
+		}
+		fmt.Println(cli.Curr.Board.String())
+	}
 }

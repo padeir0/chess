@@ -33,6 +33,7 @@ const (
 	Quit
 	Clear
 	NO
+	SelfPlay
 
 	Profile
 	StopProfile

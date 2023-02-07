@@ -418,6 +418,9 @@ func identifier(st *lexer) *lexeme {
 	case "stopprofile":
 		tp = _cmd
 		cmdKind = ck.StopProfile
+	case "selfplay":
+		tp = _cmd
+		cmdKind = ck.SelfPlay
 	case "no", "NO":
 		tp = _cmd
 		cmdKind = ck.NO
@@ -512,7 +515,7 @@ func checkCmd(cmd *Command) *Error {
 		return checkMove(cmd)
 	case ck.Profile:
 		return checkCmdProfile(cmd)
-	case ck.Quit, ck.Clear, ck.NO, ck.StopProfile:
+	case ck.Quit, ck.Clear, ck.NO, ck.StopProfile, ck.SelfPlay:
 		return nil
 	}
 	panic("invalid command")
