@@ -52,7 +52,7 @@ func (this *MoveGenerator) Next() *game.Move {
 			continue
 		}
 		if this.pseudoLegal == nil {
-			moves := game.PseudoLegalMoves(slot.Pos, slot.Piece)
+			moves := game.PseudoLegalMoves(this.g, slot.Pos, slot.Piece)
 			this.pseudoLegal = &MovesFor{
 				From: slot.Pos,
 				To:   moves,

@@ -875,18 +875,18 @@ func (this *Move) IsPass() bool {
 	return this.From == this.To
 }
 
-func PseudoLegalMoves(Pos Position, piece pc.Piece) []Position {
+func PseudoLegalMoves(g *GameState, Pos Position, piece pc.Piece) []Position {
 	switch piece {
 	case pc.BlackKing, pc.WhiteKing:
 		return genKingMoves(Pos)
 	case pc.BlackHorsie, pc.WhiteHorsie:
 		return genHorsieMoves(Pos)
 	case pc.BlackQueen, pc.WhiteQueen:
-		return genQueenMoves(Pos)
+		return genQueenMoves(g, Pos)
 	case pc.BlackBishop, pc.WhiteBishop:
-		return genBishopMoves(Pos)
+		return genBishopMoves(g, Pos)
 	case pc.BlackRook, pc.WhiteRook:
-		return genRookMoves(Pos)
+		return genRookMoves(g, Pos)
 	case pc.BlackPawn:
 		return genBlackPawnMoves(Pos)
 	case pc.WhitePawn:
@@ -944,72 +944,66 @@ func genHorsieMoves(pos Position) []Position {
 	return output
 }
 
-func genRookMoves(pos Position) []Position {
+func genRookMoves(g *GameState, from Position) []Position {
 	output := []Position{}
-	for i := 0; i <= 7; i++ {
-		if i != pos.Row {
-			newPos := Position{
-				Row:    i,
-				Column: pos.Column,
+	fromPiece := g.Board.AtPos(from)
+	for _, offset := range RookOffsets {
+		for i := 1; i < 7; i++ {
+			pos := Position{
+				Column: from.Column + (offset.Column * i),
+				Row:    from.Row + (offset.Row * i),
 			}
-			output = append(output, newPos)
-		}
-		if i != pos.Column {
-			newPos := Position{
-				Row:    pos.Row,
-				Column: i,
+			if pos.IsInvalid() {
+				break
 			}
-			output = append(output, newPos)
+			piece := g.Board.AtPos(pos)
+			if piece == pc.Empty {
+				output = append(output, pos)
+			} else if piece.IsBlack() != fromPiece.IsBlack() {
+				output = append(output, pos)
+				break
+			} else {
+				break
+			}
 		}
 	}
 	return output
 }
 
-func genBishopMoves(pos Position) []Position {
-	firstDiagPos := Position{Row: 0, Column: 0}
-	diff := pos.Row - pos.Column
-	if diff < 0 {
-		firstDiagPos = Position{Row: -diff, Column: 0}
-	} else {
-		firstDiagPos = Position{Row: 0, Column: diff}
-	}
-
-	secDiagPos := Position{Row: 0, Column: 7}
-	if diff < 0 {
-		secDiagPos = Position{Row: 7 + diff, Column: 7}
-	} else {
-		secDiagPos = Position{Row: 7, Column: diff}
-	}
-
+func genBishopMoves(g *GameState, from Position) []Position {
 	output := []Position{}
-	for i := 0; i < 7; i++ {
-		firstDiag := Position{
-			Row:    firstDiagPos.Row - i,
-			Column: firstDiagPos.Column + i,
-		}
-		if firstDiag.IsValid() && firstDiag != pos {
-			output = append(output, firstDiag)
-		}
 
-		secDiag := Position{
-			Row:    secDiagPos.Row - i,
-			Column: secDiagPos.Column - i,
-		}
-		if secDiag.IsValid() && secDiag != pos {
-			output = append(output, secDiag)
+	fromPiece := g.Board.AtPos(from)
+	for _, offset := range BishopOffsets {
+		for i := 1; i < 7; i++ {
+			to := Position{
+				Column: from.Column + (offset.Column * i),
+				Row:    from.Row + (offset.Row * i),
+			}
+			if to.IsInvalid() {
+				break
+			}
+			piece := g.Board.AtPos(to)
+			if piece == pc.Empty {
+				output = append(output, to)
+			} else if piece.IsBlack() != fromPiece.IsBlack() {
+				output = append(output, to)
+				break
+			} else {
+				break
+			}
 		}
 	}
 
 	return output
 }
 
-func genQueenMoves(pos Position) []Position {
-	return append(genBishopMoves(pos), genRookMoves(pos)...)
+func genQueenMoves(g *GameState, pos Position) []Position {
+	return append(genBishopMoves(g, pos), genRookMoves(g, pos)...)
 }
 
 func genBlackPawnMoves(pos Position) []Position {
 	return []Position{
-		{Row: pos.Row + 2, Column: pos.Column},
 		{Row: pos.Row + 1, Column: pos.Column},
 		{Row: pos.Row + 1, Column: pos.Column - 1},
 		{Row: pos.Row + 1, Column: pos.Column + 1},
@@ -1018,7 +1012,6 @@ func genBlackPawnMoves(pos Position) []Position {
 
 func genWhitePawnMoves(pos Position) []Position {
 	return []Position{
-		{Row: pos.Row - 2, Column: pos.Column},
 		{Row: pos.Row - 1, Column: pos.Column},
 		{Row: pos.Row - 1, Column: pos.Column - 1},
 		{Row: pos.Row - 1, Column: pos.Column + 1},

@@ -129,6 +129,7 @@ func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta in
 	b := board{g.Board, g.BlackTurn}
 	v, ok := c.TranspositionTable[b]
 	if ok {
+		n.Score = v
 		return v
 	}
 	mg := movegen.NewMoveGenerator(g)
@@ -147,12 +148,11 @@ func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta in
 			if score < minEval {
 				minEval = score
 			}
-
+			if score < alpha {
+				break
+			}
 			if score < beta {
 				beta = score
-			}
-			if beta < alpha {
-				break
 			}
 		}
 		n.Score = minEval
@@ -177,12 +177,11 @@ func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta in
 			maxEval = score
 			n.AddLeaf(leaf)
 		}
-
+		if score > beta {
+			break
+		}
 		if score > alpha {
 			alpha = score
-		}
-		if beta < alpha {
-			break
 		}
 	}
 	n.Score = maxEval
