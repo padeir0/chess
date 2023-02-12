@@ -23,14 +23,11 @@ import (
 func Evaluate(g *game.GameState) int {
 	if g.IsOver {
 		switch g.Result {
-		case rs.Draw:
-			return 0
 		case rs.WhiteWins:
 			return 10000
 		case rs.BlackWins:
 			return -10000
 		}
-		panic("invalid result")
 	}
 	var total int = 0
 	for _, slot := range g.WhitePieces {

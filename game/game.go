@@ -360,7 +360,7 @@ func (this *GameState) Move(from, to Position) (bool, *Slot) {
 		this.MovesSinceLastCapture = 0
 	} else {
 		this.MovesSinceLastCapture++
-		if this.MovesSinceLastCapture == 30 {
+		if this.MovesSinceLastCapture == 50 {
 			this.IsOver = true
 			this.Result = rs.Draw
 			this.Reason = "30 move limit exceeded"

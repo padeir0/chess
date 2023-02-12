@@ -17,7 +17,7 @@ func BestMove(g *game.GameState) *game.Move {
 	}
 	n := &node{
 		Move:  game.NullMove,
-		Score: 0,
+		Score: 314159,
 	}
 	newG := g.Copy()
 	score := alphaBeta(ctx, newG, n, 4, minusInf, plusInf)
@@ -155,6 +155,7 @@ func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta in
 				beta = score
 			}
 		}
+		n.Score = minEval
 		if c.CurrSize < c.MaxSize {
 			c.TranspositionTable[b] = minEval
 			c.CurrSize++
@@ -174,7 +175,6 @@ func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta in
 
 		if score > maxEval {
 			maxEval = score
-			n.AddLeaf(leaf)
 		}
 		if score > beta {
 			break

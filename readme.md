@@ -1,8 +1,6 @@
 # Simplified Chess
 
 Implements a command line UI for simplified chess and a chess engine.
-The goal is to have a 1500+ elo engine.
-Currently it does only marginally better than random moves.
 
 ## Rules
 
@@ -17,7 +15,7 @@ Rules differing from standard chess:
  - Pawns move only a single square
  - No repetition rules
  - Pawns promote automatically to queens
- - 30 moves without a capture ends in a draw
+ - 50 moves without a capture ends in a draw
 
 The rest is the same as classical chess (i think).
 

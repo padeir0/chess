@@ -4,7 +4,6 @@ import (
 	xcmd "chess/command"
 	ck "chess/command/commandkind"
 	engine0 "chess/engine0"
-	engine1 "chess/engine1"
 	game "chess/game"
 	"chess/movegen"
 
@@ -195,33 +194,33 @@ func isOver(cli *cliState) bool {
 func doSelfPlay(cli *cliState) {
 	for !isOver(cli) {
 		if cli.Curr.BlackTurn {
-			fmt.Println("engine ZERO (BLACK) -------------")
+			fmt.Println("BLACK -------------")
 			start := time.Now()
 			mv := engine0.BestMove(cli.Curr)
 			if mv == nil {
-				warn("ZERO made no moves!!")
+				warn("BLACK made no moves!!")
 				return
 			}
 			ok, _ := cli.Curr.Move(mv.From, mv.To)
 			if !ok {
-				warn("ZERO made an illegal move!!")
+				warn("BLACK made an illegal move!!")
 				return
 			}
-			fmt.Printf("ZERO: %v\n", time.Since(start))
+			fmt.Printf("BLACK: %v\n", time.Since(start))
 		} else {
-			fmt.Println("engine ONE (WHITE) --------------")
+			fmt.Println("WHITE --------------")
 			start := time.Now()
-			mv := engine1.BestMove(cli.Curr)
+			mv := engine0.BestMove(cli.Curr)
 			if mv == nil {
-				warn("ONE made no moves!!")
+				warn("WHITE made no moves!!")
 				return
 			}
 			ok, _ := cli.Curr.Move(mv.From, mv.To)
 			if !ok {
-				warn("ONE made an illegal move!!", mv.From, mv.To)
+				warn("WHITE made an illegal move!!", mv.From, mv.To)
 				return
 			}
-			fmt.Printf("ONE: %v\n", time.Since(start))
+			fmt.Printf("WHITE: %v\n", time.Since(start))
 		}
 		fmt.Println(cli.Curr.Board.String())
 		fmt.Println("--------------------------")
