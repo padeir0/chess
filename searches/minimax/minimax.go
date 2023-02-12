@@ -1,7 +1,6 @@
 package minimax
 
 import (
-	. "chess/common"
 	"chess/game"
 	"chess/movegen"
 	"fmt"
@@ -14,9 +13,9 @@ func BestMove(g *game.GameState, eval game.Evaluator) *game.Move {
 		Score: 314159,
 	}
 	newG := g.Copy()
-	score := miniMax(newG, n, 3, eval)
-	mv, best := best(n, g.BlackTurn)
-	metrics(n, mv, best, score, g.BlackTurn)
+	miniMax(newG, n, 3, eval)
+	mv, _ := best(n, g.BlackTurn)
+	//metrics(n, mv, best, score, g.BlackTurn)
 	return mv
 }
 
@@ -42,10 +41,6 @@ func best(n *node, isBlackturn bool) (*game.Move, int) {
 	}
 	n.Score = bestScore
 	return output, bestScore
-}
-
-func isClose(a, b, threshold int) bool {
-	return Abs(a-b) <= threshold
 }
 
 var totNodes = 0

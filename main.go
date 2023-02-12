@@ -53,7 +53,7 @@ type cliState struct {
 func newCliState() *cliState {
 	return &cliState{
 		Saved:           map[string]game.GameState{},
-		Curr:            game.InitialGame(),
+		Curr:            game.InitialGame(game.ShuffledBoard()),
 		ComputerIsBlack: !*asBlack,
 	}
 }
@@ -85,7 +85,7 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 		cli.Saved[txt] = *cli.Curr
 	case ck.Restore:
 		if len(cmd.Operands) == 0 {
-			cli.Curr = game.InitialGame()
+			cli.Curr = game.InitialGame(game.ShuffledBoard())
 			return
 		}
 		txt := *cmd.Operands[0].Label
@@ -120,6 +120,8 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 		pprof.StartCPUProfile(f)
 	case ck.SelfPlay:
 		doSelfPlay(cli)
+	case ck.Compare:
+		evalCompare(cli, cmd)
 	case ck.StopProfile:
 		pprof.StopCPUProfile()
 	case ck.Show:
@@ -130,14 +132,6 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 func evalMove(cli *cliState, cmd *xcmd.Command) bool {
 	from := *cmd.Operands[0].Position
 	to := *cmd.Operands[1].Position
-	if len(cmd.Operands) == 3 {
-		ok, _ := cli.Curr.Move(from, to)
-		if !ok {
-			warn("invalid move")
-			return false
-		}
-		return true
-	}
 	ok, _ := cli.Curr.Move(from, to)
 	if !ok {
 		warn("invalid move")
@@ -199,4 +193,88 @@ func doSelfPlay(cli *cliState) {
 		fmt.Println(cli.Curr.Board.String())
 		fmt.Println("--------------------------")
 	}
+}
+
+type engineScore struct {
+	eng   game.Engine
+	score float64
+	times []time.Duration
+}
+
+func play10x(A, B game.Engine) {
+	white := &engineScore{
+		eng:   A,
+		score: 0,
+		times: []time.Duration{},
+	}
+	black := &engineScore{
+		eng:   B,
+		score: 0,
+		times: []time.Duration{},
+	}
+	init := time.Now()
+	boards := []*game.Board{
+		game.ShuffledBoard(),
+		game.ShuffledBoard(),
+		game.ShuffledBoard(),
+		game.ShuffledBoard(),
+		game.ShuffledBoard(),
+	}
+	for i := 0; i < 10; i++ {
+		g := game.InitialGame(boards[i%5])
+		for !g.IsOver {
+			if g.BlackTurn {
+				start := time.Now()
+				black.eng.Play(g)
+				black.times = append(black.times, time.Since(start))
+			} else {
+				start := time.Now()
+				white.eng.Play(g)
+				white.times = append(white.times, time.Since(start))
+			}
+		}
+		switch g.Result {
+		case rs.Draw:
+			white.score += 0.5
+			black.score += 0.5
+		case rs.WhiteWins:
+			white.score += 1
+		case rs.BlackWins:
+			black.score += 1
+		}
+		fmt.Printf("%v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
+
+		// swap
+		b := black
+		black = white
+		white = b
+	}
+	fmt.Printf("Comparison took: %v\n", time.Since(init))
+	fmt.Printf("Average time for %v: %v\n", black.eng.String(), average(black.times))
+	fmt.Printf("Average time for %v: %v\n", white.eng.String(), average(white.times))
+}
+
+func evalCompare(cli *cliState, cmd *xcmd.Command) {
+	eng0Name := *cmd.Operands[0].Label
+	eng1Name := *cmd.Operands[1].Label
+
+	eng0, ok := engines.AllEngines[eng0Name]
+	if !ok {
+		warn("engine not found", eng0Name)
+		return
+	}
+	eng1, ok := engines.AllEngines[eng1Name]
+	if !ok {
+		warn("engine not found: ", eng1Name)
+		return
+	}
+	play10x(eng0, eng1)
+}
+
+func average(times []time.Duration) time.Duration {
+	var sum time.Duration
+	for _, t := range times {
+		sum += t
+	}
+	return sum / time.Duration(len(times))
 }

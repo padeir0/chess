@@ -5,21 +5,34 @@ import (
 	pc "chess/game/piece"
 	rs "chess/game/result"
 
+	"math/rand"
 	"sort"
 	"strconv"
 )
 
-type Engine struct {
+type Engine interface {
+	Play(g *GameState)
+	String() string
+}
+
+// BasicEngine does evaluation only on leaf nodes
+// and does not use any form of precomputation
+type BasicEngine struct {
+	Name   string
 	Search Search
 	Eval   Evaluator
 }
 
-func (this *Engine) Play(g *GameState) {
+func (this *BasicEngine) Play(g *GameState) {
 	bestMove := this.Search(g, this.Eval)
 	ok, _ := g.Move(bestMove.From, bestMove.To)
 	if !ok {
 		panic("engine made ilegal move")
 	}
+}
+
+func (this *BasicEngine) String() string {
+	return this.Name
 }
 
 type Search func(*GameState, Evaluator) *Move
@@ -36,6 +49,34 @@ func debugBoard(slots []*Slot) *Board {
 		b.SetPos(slot.Pos, slot.Piece)
 	}
 	return &b
+}
+
+func ShuffledBoard() *Board {
+	bag := []pc.Piece{pc.BlackRook, pc.BlackHorsie, pc.BlackBishop, pc.BlackQueen, pc.BlackKing, pc.BlackBishop, pc.BlackHorsie, pc.BlackRook}
+	rand.Shuffle(len(bag), func(i, j int) {
+		a := bag[i]
+		bag[i] = bag[j]
+		bag[j] = a
+	})
+	output := InitialBoard()
+	for i, blackPiece := range bag {
+		output.Set(0, i, blackPiece)
+		whitePiece := pc.Empty
+		switch blackPiece {
+		case pc.BlackRook:
+			whitePiece = pc.WhiteRook
+		case pc.BlackHorsie:
+			whitePiece = pc.WhiteHorsie
+		case pc.BlackBishop:
+			whitePiece = pc.WhiteBishop
+		case pc.BlackQueen:
+			whitePiece = pc.WhiteQueen
+		case pc.BlackKing:
+			whitePiece = pc.WhiteKing
+		}
+		output.Set(7, i, whitePiece)
+	}
+	return output
 }
 
 func InitialBoard() *Board {
@@ -120,6 +161,11 @@ func (this *Board) At(row, column int) pc.Piece {
 func (this *Board) SetPos(pos Position, s pc.Piece) {
 	(*this)[pos.Column+8*pos.Row] = s
 }
+
+func (this *Board) Set(row, column int, s pc.Piece) {
+	(*this)[column+8*row] = s
+}
+
 func (this *Board) Pop(pos Position) pc.Piece {
 	i := pos.Column + 8*pos.Row
 	ret := (*this)[i]
@@ -175,10 +221,10 @@ func (this Position) String() string {
 	return string(col) + string(row)
 }
 
-func InitialGame() *GameState {
+func InitialGame(board *Board) *GameState {
 	game := &GameState{
 		BlackTurn: false,
-		Board:     *InitialBoard(),
+		Board:     *board,
 
 		BlackKingPosition: Position{Row: 0, Column: 4},
 		WhiteKingPosition: Position{Row: 7, Column: 4},

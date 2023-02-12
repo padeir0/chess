@@ -421,6 +421,9 @@ func identifier(st *lexer) *lexeme {
 	case "selfplay":
 		tp = _cmd
 		cmdKind = ck.SelfPlay
+	case "compare":
+		tp = _cmd
+		cmdKind = ck.Compare
 	case "no", "NO":
 		tp = _cmd
 		cmdKind = ck.NO
@@ -515,6 +518,8 @@ func checkCmd(cmd *Command) *Error {
 		return checkMove(cmd)
 	case ck.Profile:
 		return checkCmdProfile(cmd)
+	case ck.Compare:
+		return checkCmdCompare(cmd)
 	case ck.Quit, ck.Clear, ck.NO, ck.StopProfile, ck.SelfPlay:
 		return nil
 	}
@@ -528,14 +533,16 @@ func checkMove(cmd *Command) *Error {
 			return nil
 		}
 	}
-	if len(cmd.Operands) == 3 {
-		if cmd.Operands[0].IsPosition() &&
-			cmd.Operands[1].IsPosition() &&
-			cmd.Operands[2].IsLabel() {
-			return nil
-		}
+	return checkErr("move <pos> <pos>")
+}
+
+func checkCmdCompare(cmd *Command) *Error {
+	if len(cmd.Operands) == 2 &&
+		cmd.Operands[0].IsLabel() &&
+		cmd.Operands[1].IsLabel() {
+		return nil
 	}
-	return checkErr("move <pos> <pos> [prom]")
+	return checkErr(cmd.Kind.String() + " <label> <label>")
 }
 
 func checkCmdSave(cmd *Command) *Error {

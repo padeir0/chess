@@ -16,6 +16,8 @@ func (this CommandKind) String() string {
 		return "quit"
 	case Clear:
 		return "clear"
+	case Compare:
+		return "compare"
 	case Profile:
 		return "profile"
 	case StopProfile:
@@ -34,6 +36,7 @@ const (
 	Clear
 	NO
 	SelfPlay
+	Compare
 
 	Profile
 	StopProfile
