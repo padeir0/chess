@@ -124,6 +124,20 @@ func (this Slot) IsInvalid() bool {
 	return this.Piece == pc.Empty || this.Piece == pc.InvalidPiece
 }
 
+func NewPosition(s string) Position {
+	col := s[0]
+	row := s[1]
+	if col >= 'a' && col <= 'h' &&
+		row >= '1' && row <= '8' {
+		pos := Position{
+			Column: int(col - 'a'),
+			Row:    7 - int(row-'1'),
+		}
+		return pos
+	}
+	panic("invalid position string")
+}
+
 type Position struct {
 	Row    int // 1 2 3 4 5 6 7 8
 	Column int // a b c d e f g h
@@ -865,7 +879,7 @@ func (this *Move) String() string {
 	if this.Capture != nil {
 		return this.Piece.String() +
 			" " + this.From.String() + this.To.String() +
-			this.Capture.Piece.String()
+			" " + this.Capture.Piece.String()
 	}
 	return this.Piece.String() + " " +
 		this.From.String() + this.To.String()

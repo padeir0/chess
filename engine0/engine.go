@@ -10,19 +10,14 @@ import (
 
 func BestMove(g *game.GameState) *game.Move {
 	totNodes = 0
-	ctx := &context{
-		TranspositionTable: map[board]int{},
-		CurrSize:           0,
-		MaxSize:            5000,
-	}
 	n := &node{
 		Move:  game.NullMove,
 		Score: 314159,
 	}
 	newG := g.Copy()
-	score := alphaBeta(ctx, newG, n, 4, minusInf, plusInf)
+	score := miniMax(newG, n, 3)
 	mv, best := best(n, g.BlackTurn)
-	metrics(ctx, n, mv, best, score)
+	metrics(n, mv, best, score, g.BlackTurn)
 	return mv
 }
 
@@ -56,17 +51,17 @@ func isClose(a, b, threshold int) bool {
 
 var totNodes = 0
 
-func metrics(ctx *context, start *node, bestMove *game.Move, best, score int) {
+func metrics(start *node, bestMove *game.Move, bestScore, score int, isBlack bool) {
 	avg := _m(start)
 	for _, leaf := range start.Leaves {
-		fmt.Printf("%v%v: %v\n", leaf.Move.From, leaf.Move.To, leaf.Score)
+		mv, score := best(leaf, !isBlack)
+		fmt.Printf("%v -> %v: %v\n", leaf.Move, mv, score)
 	}
 	fmt.Println("Best Move: ", bestMove)
-	fmt.Println("Best Score: ", best)
+	fmt.Println("Best Score: ", bestScore)
 	fmt.Println("AB Score: ", score)
 	fmt.Printf("Average breadth: %v\n", avg)
 	fmt.Printf("Total Nodes: %v\n", totNodes)
-	fmt.Printf("Transposition Table Size: %v\n", len(ctx.TranspositionTable))
 }
 
 func _m(start *node) int {
@@ -110,27 +105,10 @@ var plusInf int = (1 << 16)
 
 type Evaluator func(g *game.GameState) int
 
-type board struct {
-	b       game.Board
-	isBlack bool
-}
-
-type context struct {
-	TranspositionTable map[board]int
-	CurrSize           int
-	MaxSize            int
-}
-
-func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta int) int {
+func miniMax(g *game.GameState, n *node, depth int) int {
 	if depth == 0 || g.IsOver {
 		n.Score = eval.Evaluate(g)
 		return n.Score
-	}
-	b := board{g.Board, g.BlackTurn}
-	v, ok := c.TranspositionTable[b]
-	if ok {
-		n.Score = v
-		return v
 	}
 	mg := movegen.NewMoveGenerator(g)
 	if g.BlackTurn {
@@ -141,25 +119,15 @@ func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta in
 				break
 			}
 			leaf := &node{Move: mv}
-			score := alphaBeta(c, g, leaf, depth-1, alpha, beta)
+			score := (miniMax(g, leaf, depth-1) * 3) / 4
 			g.UnMove()
 			n.AddLeaf(leaf)
 
 			if score < minEval {
 				minEval = score
 			}
-			if score < alpha {
-				break
-			}
-			if score < beta {
-				beta = score
-			}
 		}
 		n.Score = minEval
-		if c.CurrSize < c.MaxSize {
-			c.TranspositionTable[b] = minEval
-			c.CurrSize++
-		}
 		return minEval
 	}
 	maxEval := minusInf
@@ -169,24 +137,14 @@ func alphaBeta(c *context, g *game.GameState, n *node, depth int, alpha, beta in
 			break
 		}
 		leaf := &node{Move: mv}
-		score := alphaBeta(c, g, leaf, depth-1, alpha, beta)
+		score := (miniMax(g, leaf, depth-1) * 3) / 4
 		g.UnMove()
 		n.AddLeaf(leaf)
 
 		if score > maxEval {
 			maxEval = score
 		}
-		if score > beta {
-			break
-		}
-		if score > alpha {
-			alpha = score
-		}
 	}
 	n.Score = maxEval
-	if c.CurrSize < c.MaxSize {
-		c.TranspositionTable[b] = maxEval
-		c.CurrSize++
-	}
 	return maxEval
 }
