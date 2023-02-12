@@ -1,21 +1,20 @@
-package engine
+package minimax
 
 import (
 	. "chess/common"
-	"chess/engine0/eval"
 	"chess/game"
 	"chess/movegen"
 	"fmt"
 )
 
-func BestMove(g *game.GameState) *game.Move {
+func BestMove(g *game.GameState, eval game.Evaluator) *game.Move {
 	totNodes = 0
 	n := &node{
 		Move:  game.NullMove,
 		Score: 314159,
 	}
 	newG := g.Copy()
-	score := miniMax(newG, n, 3)
+	score := miniMax(newG, n, 3, eval)
 	mv, best := best(n, g.BlackTurn)
 	metrics(n, mv, best, score, g.BlackTurn)
 	return mv
@@ -103,11 +102,9 @@ func (this *node) AddLeaf(n *node) {
 var minusInf int = -(1 << 16)
 var plusInf int = (1 << 16)
 
-type Evaluator func(g *game.GameState) int
-
-func miniMax(g *game.GameState, n *node, depth int) int {
+func miniMax(g *game.GameState, n *node, depth int, eval game.Evaluator) int {
 	if depth == 0 || g.IsOver {
-		n.Score = eval.Evaluate(g)
+		n.Score = eval(g)
 		return n.Score
 	}
 	mg := movegen.NewMoveGenerator(g)
@@ -119,7 +116,7 @@ func miniMax(g *game.GameState, n *node, depth int) int {
 				break
 			}
 			leaf := &node{Move: mv}
-			score := (miniMax(g, leaf, depth-1) * 3) / 4
+			score := (miniMax(g, leaf, depth-1, eval) * 3) / 4
 			g.UnMove()
 			n.AddLeaf(leaf)
 
@@ -137,7 +134,7 @@ func miniMax(g *game.GameState, n *node, depth int) int {
 			break
 		}
 		leaf := &node{Move: mv}
-		score := (miniMax(g, leaf, depth-1) * 3) / 4
+		score := (miniMax(g, leaf, depth-1, eval) * 3) / 4
 		g.UnMove()
 		n.AddLeaf(leaf)
 

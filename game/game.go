@@ -9,6 +9,22 @@ import (
 	"strconv"
 )
 
+type Engine struct {
+	Search Search
+	Eval   Evaluator
+}
+
+func (this *Engine) Play(g *GameState) {
+	bestMove := this.Search(g, this.Eval)
+	ok, _ := g.Move(bestMove.From, bestMove.To)
+	if !ok {
+		panic("engine made ilegal move")
+	}
+}
+
+type Search func(*GameState, Evaluator) *Move
+type Evaluator func(*GameState) int
+
 func debugBoard(slots []*Slot) *Board {
 	b := Board{}
 	for i := 0; i < 64; i++ {

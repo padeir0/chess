@@ -1,4 +1,4 @@
-package eval
+package matposmob
 
 import (
 	"chess/game"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-// i'm going to use only:
+// evaluates material, position and mobility:
 //     pawn structure
 //         connected pawns, position
 //     mobility
