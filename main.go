@@ -6,7 +6,9 @@ import (
 	engine0 "chess/engine0"
 	engine1 "chess/engine1"
 	game "chess/game"
-	pr "chess/game/promotion"
+	"chess/movegen"
+
+	rs "chess/game/result"
 
 	"bufio"
 	"flag"
@@ -129,39 +131,19 @@ func evalMove(cli *cliState, cmd *xcmd.Command) bool {
 	from := *cmd.Operands[0].Position
 	to := *cmd.Operands[1].Position
 	if len(cmd.Operands) == 3 {
-		promTxt := *cmd.Operands[2].Label
-		prom := convertLabelToProm(promTxt)
-		if prom == pr.InvalidPromotion {
-			warn("invalid promotion")
-			return false
-		}
-		ok, _ := cli.Curr.Move(from, to, prom)
+		ok, _ := cli.Curr.Move(from, to)
 		if !ok {
 			warn("invalid move")
 			return false
 		}
 		return true
 	}
-	ok, _ := cli.Curr.Move(from, to, pr.InvalidPromotion)
+	ok, _ := cli.Curr.Move(from, to)
 	if !ok {
 		warn("invalid move")
 		return false
 	}
 	return true
-}
-
-func convertLabelToProm(label string) pr.Promotion {
-	switch label {
-	case "W", "w":
-		return pr.Queen
-	case "H", "h":
-		return pr.Horsie
-	case "B", "b":
-		return pr.Bishop
-	case "R", "r":
-		return pr.Rook
-	}
-	return pr.InvalidPromotion
 }
 
 func evalShow(cli *cliState, cmd *xcmd.Command) {
@@ -172,19 +154,23 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 	whatToShow := *cmd.Operands[0].Label
 	switch whatToShow {
 	case "moves":
-		fmt.Println(cli.Curr.ShowMoves())
+		newG := cli.Curr.Copy()
+		mgen := movegen.NewMoveGenerator(newG)
+		mvs := movegen.ConsumeAll(mgen)
+		hls := game.MoveToHighlight(mvs)
+		fmt.Println(cli.Curr.Board.Show(hls))
 	default:
 		warn("unimplemented")
 	}
 }
 
 func enginePlay(cli *cliState) {
-	mv := engine1.BestMove(cli.Curr)
+	mv := engine0.BestMove(cli.Curr)
 	if mv == nil {
 		warn("engine made no moves!!")
 		return
 	}
-	ok, _ := cli.Curr.Move(mv.From, mv.To, pr.Queen)
+	ok, _ := cli.Curr.Move(mv.From, mv.To)
 	if !ok {
 		warn("engine made an illegal move!!", mv)
 		return
@@ -192,45 +178,52 @@ func enginePlay(cli *cliState) {
 }
 
 func isOver(cli *cliState) bool {
-	over, msg := cli.Curr.IsOver()
-	if over {
-		fmt.Println(msg)
+	if cli.Curr.IsOver {
+		switch cli.Curr.Result {
+		case rs.Draw:
+			fmt.Println("Draw: ", cli.Curr.Reason)
+		case rs.WhiteWins:
+			fmt.Println("White Wins: ", cli.Curr.Reason)
+		case rs.BlackWins:
+			fmt.Println("Black Wins: ", cli.Curr.Reason)
+		}
 		return true
 	}
 	return false
 }
 
 func doSelfPlay(cli *cliState) {
-	for i := 0; i < 200; i++ {
+	for !isOver(cli) {
 		if cli.Curr.BlackTurn {
-			fmt.Println("engine ZERO -------------")
+			fmt.Println("engine ZERO (BLACK) -------------")
 			start := time.Now()
 			mv := engine0.BestMove(cli.Curr)
 			if mv == nil {
-				warn("black made no moves!!")
+				warn("ZERO made no moves!!")
 				return
 			}
-			ok, _ := cli.Curr.Move(mv.From, mv.To, pr.Queen)
+			ok, _ := cli.Curr.Move(mv.From, mv.To)
 			if !ok {
-				warn("black made an illegal move!!")
+				warn("ZERO made an illegal move!!")
 				return
 			}
-			fmt.Printf("black: %v\n", time.Since(start))
+			fmt.Printf("ZERO: %v\n", time.Since(start))
 		} else {
-			fmt.Println("engine ONE --------------")
+			fmt.Println("engine ONE (WHITE) --------------")
 			start := time.Now()
 			mv := engine1.BestMove(cli.Curr)
 			if mv == nil {
-				warn("white made no moves!!")
+				warn("ONE made no moves!!")
 				return
 			}
-			ok, _ := cli.Curr.Move(mv.From, mv.To, pr.Queen)
+			ok, _ := cli.Curr.Move(mv.From, mv.To)
 			if !ok {
-				warn("white made an illegal move!!", mv.From, mv.To)
+				warn("ONE made an illegal move!!", mv.From, mv.To)
 				return
 			}
-			fmt.Printf("white: %v\n", time.Since(start))
+			fmt.Printf("ONE: %v\n", time.Since(start))
 		}
 		fmt.Println(cli.Curr.Board.String())
+		fmt.Println("--------------------------")
 	}
 }

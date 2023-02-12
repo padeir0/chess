@@ -3,6 +3,7 @@ package eval
 import (
 	"chess/game"
 	pc "chess/game/piece"
+	rs "chess/game/result"
 	"fmt"
 )
 
@@ -20,6 +21,9 @@ import (
 
 // maximize for white
 func Evaluate(g *game.GameState) int {
+	if g.IsOver && g.Result == rs.Draw {
+		return 0
+	}
 	var total int = 0
 	for _, slot := range g.WhitePieces {
 		if slot.IsInvalid() {
@@ -290,7 +294,7 @@ func pawnWeight(g *game.GameState, pinfo *PieceInfo) int {
 
 func isConnectedPawn(g *game.GameState, pinfo *PieceInfo) bool {
 	var left, right game.Position
-	var pawn, movedPawn pc.Piece
+	var pawn pc.Piece
 	if pinfo.IsBlack {
 		left = game.Position{
 			Column: pinfo.Pos.Column - 1,
@@ -301,7 +305,6 @@ func isConnectedPawn(g *game.GameState, pinfo *PieceInfo) bool {
 			Row:    pinfo.Pos.Row + 1,
 		}
 		pawn = pc.BlackPawn
-		movedPawn = pc.BlackMovedPawn
 	} else {
 		left = game.Position{
 			Column: pinfo.Pos.Column + 1,
@@ -312,19 +315,16 @@ func isConnectedPawn(g *game.GameState, pinfo *PieceInfo) bool {
 			Row:    pinfo.Pos.Row + 1,
 		}
 		pawn = pc.WhitePawn
-		movedPawn = pc.WhiteMovedPawn
 	}
 	if left.IsValid() {
 		leftpiece := g.Board.AtPos(left)
-		if leftpiece == pawn ||
-			leftpiece == movedPawn {
+		if leftpiece == pawn {
 			return true
 		}
 	}
 	if right.IsValid() {
 		rightpiece := g.Board.AtPos(right)
-		if rightpiece == pawn ||
-			rightpiece == movedPawn {
+		if rightpiece == pawn {
 			return true
 		}
 	}

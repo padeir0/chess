@@ -3,7 +3,7 @@ package game
 import (
 	ac "chess/asciicolors"
 	pc "chess/game/piece"
-	pr "chess/game/promotion"
+	rs "chess/game/result"
 
 	"sort"
 	"strconv"
@@ -14,8 +14,8 @@ func debugBoard(slots []*Slot) *Board {
 	for i := 0; i < 64; i++ {
 		b[i] = pc.Empty
 	}
-	b.SetPos(Position{Row: 0, Column: 4}, pc.BlackCastleKing)
-	b.SetPos(Position{Row: 7, Column: 4}, pc.WhiteCastleKing)
+	b.SetPos(Position{Row: 0, Column: 4}, pc.BlackKing)
+	b.SetPos(Position{Row: 7, Column: 4}, pc.WhiteKing)
 	for _, slot := range slots {
 		b.SetPos(slot.Pos, slot.Piece)
 	}
@@ -24,14 +24,14 @@ func debugBoard(slots []*Slot) *Board {
 
 func InitialBoard() *Board {
 	return &Board{
-		pc.BlackRook, pc.BlackHorsie, pc.BlackBishop, pc.BlackQueen, pc.BlackCastleKing, pc.BlackBishop, pc.BlackHorsie, pc.BlackRook,
+		pc.BlackRook, pc.BlackHorsie, pc.BlackBishop, pc.BlackQueen, pc.BlackKing, pc.BlackBishop, pc.BlackHorsie, pc.BlackRook,
 		pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn,
-		pc.WhiteRook, pc.WhiteHorsie, pc.WhiteBishop, pc.WhiteQueen, pc.WhiteCastleKing, pc.WhiteBishop, pc.WhiteHorsie, pc.WhiteRook,
+		pc.WhiteRook, pc.WhiteHorsie, pc.WhiteBishop, pc.WhiteQueen, pc.WhiteKing, pc.WhiteBishop, pc.WhiteHorsie, pc.WhiteRook,
 	}
 }
 
@@ -155,6 +155,14 @@ func InitialGame() *GameState {
 
 		BlackPieces: []Slot{},
 		WhitePieces: []Slot{},
+
+		Moves: NewMoveStack(),
+
+		IsOver: false,
+		Result: rs.InvalidResult,
+
+		TotalValuablePieces:   0,
+		MovesSinceLastCapture: 0,
 	}
 
 	for i, piece := range game.Board {
@@ -178,6 +186,58 @@ func InitialGame() *GameState {
 	return game
 }
 
+func NewMoveStack() *MoveStack {
+	return &MoveStack{
+		top:  0,
+		data: make([]*Move, 64),
+	}
+}
+
+type MoveStack struct {
+	top  int
+	data []*Move
+}
+
+func (this *MoveStack) Push(mv *Move) {
+	if this.data == nil {
+		this.data = make([]*Move, 64)
+	}
+	if this.top >= len(this.data) {
+		this.data = append(this.data, make([]*Move, 64)...)
+	}
+	this.data[this.top] = mv
+	this.top++
+}
+
+func (this *MoveStack) Pop() *Move {
+	if this.top <= 0 {
+		return nil
+	}
+	this.top--
+	return this.data[this.top]
+}
+
+func (this *MoveStack) Top() *Move {
+	if this.top <= 0 {
+		return nil
+	}
+	return this.data[this.top-1]
+}
+
+func (this *MoveStack) Copy() *MoveStack {
+	a := &MoveStack{
+		top:  this.top,
+		data: make([]*Move, len(this.data)),
+	}
+	for i, mv := range this.data {
+		if mv != nil {
+			newmv := *mv
+			a.data[i] = &newmv
+		}
+	}
+	return a
+}
+
 type GameState struct {
 	BlackTurn bool
 	Board     Board
@@ -189,29 +249,14 @@ type GameState struct {
 	BlackPieces []Slot
 	WhitePieces []Slot
 
-	TotalValuablePieces int
-}
+	Moves *MoveStack
 
-// not to be used by the engine
-func (this *GameState) IsOver() (bool, string) {
-	if this.IsAttacked(this.BlackKingPosition, true) &&
-		len(this.ValidMoves(true)) == 0 {
-		return true, "white wins by checkmate"
-	}
-	if this.IsAttacked(this.WhiteKingPosition, false) &&
-		len(this.ValidMoves(false)) == 0 {
-		return true, "black wins by checkmate"
-	}
-	if len(this.ValidMoves(this.BlackTurn)) == 0 {
-		return true, "draw by stalemate"
-	}
-	return false, ""
-}
+	IsOver bool
+	Result rs.Result
+	Reason string
 
-func (this *GameState) ShowMoves() string {
-	moves := this.ValidMoves(this.BlackTurn)
-	hls := MoveToHighlight(moves)
-	return this.Board.Show(hls)
+	TotalValuablePieces   int
+	MovesSinceLastCapture int
 }
 
 func MoveToHighlight(in []*Move) []Highlight {
@@ -228,13 +273,17 @@ func MoveToHighlight(in []*Move) []Highlight {
 
 func (this *GameState) Copy() *GameState {
 	output := &GameState{
-		BlackTurn:           this.BlackTurn,
-		Board:               this.Board,
-		BlackKingPosition:   this.BlackKingPosition,
-		WhiteKingPosition:   this.WhiteKingPosition,
-		BlackPieces:         make([]Slot, len(this.BlackPieces)),
-		WhitePieces:         make([]Slot, len(this.WhitePieces)),
-		TotalValuablePieces: this.TotalValuablePieces,
+		BlackTurn:             this.BlackTurn,
+		Board:                 this.Board,
+		BlackKingPosition:     this.BlackKingPosition,
+		WhiteKingPosition:     this.WhiteKingPosition,
+		BlackPieces:           make([]Slot, len(this.BlackPieces)),
+		WhitePieces:           make([]Slot, len(this.WhitePieces)),
+		TotalValuablePieces:   this.TotalValuablePieces,
+		MovesSinceLastCapture: this.MovesSinceLastCapture,
+		Moves:                 this.Moves.Copy(),
+		IsOver:                this.IsOver,
+		Result:                this.Result,
 	}
 	for i, slot := range this.BlackPieces {
 		if slot.IsInvalid() {
@@ -251,46 +300,91 @@ func (this *GameState) Copy() *GameState {
 	return output
 }
 
+var NullMove = &Move{
+	Piece: pc.InvalidPiece,
+	From: Position{
+		Row:    0,
+		Column: 0,
+	},
+	To: Position{
+		Row:    0,
+		Column: 0,
+	},
+	Capture: nil,
+}
+
 // returns if the move was sucessful
-func (g *GameState) Move(from, to Position, prom pr.Promotion) (bool, *Slot) {
-	fromPiece := g.Board.AtPos(from)
-	if fromPiece.IsWhite() == g.BlackTurn {
+// passing your turn is represented by from == to
+func (this *GameState) Move(from, to Position) (bool, *Slot) {
+	if this.IsOver {
+		return false, nil
+	}
+	if from == to { // passing turn (null move)
+		previous := this.Moves.Top()
+		if previous != nil && previous.IsPass() {
+			this.IsOver = true
+			this.Result = rs.Draw
+			this.Reason = "Both players passed turn"
+		}
+		null := *NullMove
+		this.MovesSinceLastCapture++
+		null.MovesSinceLastCapture = this.MovesSinceLastCapture
+
+		this.Moves.Push(&null)
+		this.BlackTurn = !this.BlackTurn
+		return true, nil
+	}
+	fromPiece := this.Board.AtPos(from)
+	if fromPiece.IsWhite() == this.BlackTurn {
 		return false, nil
 	}
 
-	ok, capture := g.IsValidMove(from, to)
+	ok, capture := this.IsValidMove(from, to)
 	if !ok {
 		return false, nil
 	}
 
-	if g.putsKingInCheck(from, to, capture) {
-		return false, nil
-	}
-
-	piece := g.Board.AtPos(from)
-	canPromote := canPromote(g, piece, to)
-	if canPromote && prom == pr.InvalidPromotion {
-		return false, nil
-	}
+	piece := this.Board.AtPos(from)
 
 	if capture != nil {
-		g.Board.Pop(capture.Pos)
-	}
-
-	newPiece := pc.InvalidPiece
-	if canPromote {
-		newPiece = promotionToPiece(piece.IsBlack(), prom)
-		g.Board.SetPos(from, pc.Empty)
-		g.Board.SetPos(to, newPiece)
+		this.Board.Pop(capture.Pos)
+		if capture.Piece == pc.BlackKing {
+			this.IsOver = true
+			this.Result = rs.WhiteWins
+			this.Reason = "Black king was captured"
+		} else if capture.Piece == pc.WhiteKing {
+			this.IsOver = true
+			this.Result = rs.BlackWins
+			this.Reason = "White king was captured"
+		}
+		this.MovesSinceLastCapture = 0
 	} else {
-		newPiece = alterPieceState(piece, from, to)
-		g.Board.SetPos(from, pc.Empty)
-		g.Board.SetPos(to, newPiece)
+		this.MovesSinceLastCapture++
+		if this.MovesSinceLastCapture == 30 {
+			this.IsOver = true
+			this.Result = rs.Draw
+			this.Reason = "30 move limit exceeded"
+		}
 	}
 
-	g.updatePieceTable(newPiece, capture, from, to)
+	oldpiece := piece
+	if canPromote(this, piece, to) {
+		piece = promote(piece.IsBlack())
+	}
+	this.Board.SetPos(from, pc.Empty)
+	this.Board.SetPos(to, piece)
 
-	g.BlackTurn = !g.BlackTurn
+	this.updatePieceTable(piece, capture, from, to)
+
+	this.Moves.Push(&Move{
+		Piece:   oldpiece,
+		From:    from,
+		To:      to,
+		Capture: capture,
+
+		MovesSinceLastCapture: this.MovesSinceLastCapture,
+	})
+	this.BlackTurn = !this.BlackTurn
 	return true, capture
 }
 
@@ -305,9 +399,7 @@ func (g *GameState) IsValidMove(from, to Position) (bool, *Slot) {
 	}
 
 	switch fromPiece {
-	case pc.BlackCastleKing, pc.WhiteCastleKing: // can castle
-		return isValidKingMove(g, from, to)
-	case pc.BlackKing, pc.WhiteKing: // can't castle
+	case pc.BlackKing, pc.WhiteKing:
 		return isValidMovedKingMove(g, from, to)
 
 	case pc.BlackHorsie, pc.WhiteHorsie:
@@ -319,52 +411,15 @@ func (g *GameState) IsValidMove(from, to Position) (bool, *Slot) {
 	case pc.BlackBishop, pc.WhiteBishop:
 		return isValidBishopMove(g, from, to)
 
-	case pc.BlackRook, pc.WhiteRook,
-		pc.BlackMovedRook, pc.WhiteMovedRook:
+	case pc.BlackRook, pc.WhiteRook:
 		return isValidRookMove(g, from, to)
 
-	case pc.BlackMovedPawn:
-		return isValidBlackMovedPawnMove(g, from, to)
 	case pc.BlackPawn:
 		return isValidBlackPawnMove(g, from, to)
-
-	case pc.WhiteMovedPawn:
-		return isValidWhiteMovedPawnMove(g, from, to)
 	case pc.WhitePawn:
 		return isValidWhitePawnMove(g, from, to)
 	}
 	panic("oh no!")
-}
-
-func (this *GameState) ValidMoves(isBlack bool) []*Move {
-	slots := this.WhitePieces
-	if isBlack {
-		slots = this.BlackPieces
-	}
-	outStates := []*Move{}
-	newGS := this.Copy()
-	for _, slot := range slots {
-		if slot.IsInvalid() {
-			continue
-		}
-		// Move() may alter the slot
-		piece := slot.Piece
-		moves := PseudoLegalMoves(slot.Pos, slot.Piece)
-		for _, to := range moves {
-			ok, capture := newGS.Move(slot.Pos, to, pr.Queen)
-			if ok {
-				move := &Move{
-					Piece:   piece,
-					From:    slot.Pos,
-					To:      to,
-					Capture: capture,
-				}
-				newGS.Unmake(piece, slot.Pos, to, capture)
-				outStates = append(outStates, move)
-			}
-		}
-	}
-	return outStates
 }
 
 func (this *GameState) IsAttacked(pos Position, isBlack bool) bool {
@@ -386,10 +441,10 @@ func (this *GameState) IsAttacked(pos Position, isBlack bool) bool {
 }
 
 func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to Position) {
-	if piece == pc.BlackCastleKing || piece == pc.BlackKing {
+	if piece == pc.BlackKing {
 		this.BlackKingPosition = to
 	}
-	if piece == pc.WhiteCastleKing || piece == pc.WhiteKing {
+	if piece == pc.WhiteKing {
 		this.WhiteKingPosition = to
 	}
 	if capture != nil && !capture.Piece.IsPawnLike() {
@@ -436,10 +491,10 @@ func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to 
 }
 
 func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to Position) {
-	if piece == pc.BlackCastleKing || piece == pc.BlackKing {
+	if piece == pc.BlackKing {
 		this.BlackKingPosition = from
 	}
-	if piece == pc.WhiteCastleKing || piece == pc.WhiteKing {
+	if piece == pc.WhiteKing {
 		this.WhiteKingPosition = from
 	}
 	if capture != nil && !capture.Piece.IsPawnLike() {
@@ -489,17 +544,8 @@ func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to
 	}
 }
 
-func (this *GameState) Unmake(piece pc.Piece, from, to Position, capture *Slot) {
-	this.unmakeTableUpdate(piece, capture, from, to)
-	this.Board.Pop(to)
-	if capture != nil {
-		this.Board.SetPos(capture.Pos, capture.Piece)
-	}
-	this.Board.SetPos(from, piece)
-	this.BlackTurn = !this.BlackTurn
-}
-
-func (this *GameState) UnmakeMove(mv *Move) {
+func (this *GameState) UnMove() {
+	mv := this.Moves.Pop()
 	this.unmakeTableUpdate(mv.Piece, mv.Capture, mv.From, mv.To)
 	this.Board.Pop(mv.To)
 	if mv.Capture != nil {
@@ -507,72 +553,34 @@ func (this *GameState) UnmakeMove(mv *Move) {
 	}
 	this.Board.SetPos(mv.From, mv.Piece)
 	this.BlackTurn = !this.BlackTurn
-}
-
-func (this *GameState) putsKingInCheck(from, to Position, capture *Slot) bool {
-	// perform move
-	piece := this.Board.Pop(from)
-	if capture != nil {
-		this.Board.Pop(capture.Pos)
+	this.MovesSinceLastCapture = mv.MovesSinceLastCapture
+	if this.IsOver {
+		this.IsOver = false
+		this.Reason = ""
+		this.Result = rs.InvalidResult
 	}
-	this.Board.SetPos(to, piece)
-
-	answer := false
-	if piece.IsKingLike() {
-		answer = this.IsAttacked(to, this.BlackTurn)
-	} else if this.BlackTurn {
-		answer = this.IsAttacked(this.BlackKingPosition, true)
-	} else {
-		answer = this.IsAttacked(this.WhiteKingPosition, false)
-	}
-
-	// undo move
-	this.Board.Pop(to)
-	if capture != nil {
-		this.Board.SetPos(capture.Pos, capture.Piece)
-	}
-	this.Board.SetPos(from, piece)
-	return answer
-}
-
-func isValidBlackMovedPawnMove(g *GameState, from, to Position) (bool, *Slot) {
-	// can only move 2 steps foward one time
-	if to.Row-from.Row != 1 {
-		return false, nil
-	}
-	return isValidBlackPawnMove(g, from, to)
 }
 
 /*
   P
  ###
-  #
 */
 func isValidBlackPawnMove(g *GameState, from, to Position) (bool, *Slot) {
 	// check shape of movement
-	if to.Row-from.Row > 2 || to.Row <= from.Row ||
+	if to.Row-from.Row != 1 ||
 		to.Column-from.Column > 1 || to.Column-from.Column < -1 {
 		return false, nil
 	}
 	return isValidPawnMove(g, from, to)
 }
 
-func isValidWhiteMovedPawnMove(g *GameState, from, to Position) (bool, *Slot) {
-	// can only move 2 steps foward one time
-	if to.Row-from.Row != -1 {
-		return false, nil
-	}
-	return isValidWhitePawnMove(g, from, to)
-}
-
 /*
-  #
  ###
   P
 */
 func isValidWhitePawnMove(g *GameState, from, to Position) (bool, *Slot) {
 	// check shape of movement
-	if to.Row-from.Row < -2 || to.Row >= from.Row ||
+	if to.Row-from.Row != -1 ||
 		to.Column-from.Column > 1 || to.Column-from.Column < -1 {
 		return false, nil
 	}
@@ -832,47 +840,11 @@ func canPromote(g *GameState, piece pc.Piece, to Position) bool {
 		(piece == pc.WhitePawn && to.Row == 0)
 }
 
-func promotionToPiece(isBlack bool, prom pr.Promotion) pc.Piece {
+func promote(isBlack bool) pc.Piece {
 	if isBlack {
-		switch prom {
-		case pr.Horsie:
-			return pc.BlackHorsie
-		case pr.Rook:
-			return pc.BlackRook
-		case pr.Queen:
-			return pc.BlackQueen
-		case pr.Bishop:
-			return pc.BlackBishop
-		}
+		return pc.BlackQueen
 	}
-	switch prom {
-	case pr.Horsie:
-		return pc.WhiteHorsie
-	case pr.Rook:
-		return pc.WhiteRook
-	case pr.Queen:
-		return pc.WhiteQueen
-	case pr.Bishop:
-		return pc.WhiteBishop
-	}
-	panic("no horsequeens")
-}
-
-// move must be valid
-func alterPieceState(piece pc.Piece, from, to Position) pc.Piece {
-	if piece == pc.BlackPawn {
-		return pc.BlackMovedPawn
-	}
-	if piece == pc.WhitePawn {
-		return pc.WhiteMovedPawn
-	}
-	if piece == pc.WhiteRook {
-		return pc.WhiteMovedRook
-	}
-	if piece == pc.BlackRook {
-		return pc.BlackMovedRook
-	}
-	return piece
+	return pc.WhiteQueen
 }
 
 func Abs(a int32) int32 {
@@ -885,6 +857,8 @@ type Move struct {
 	From    Position
 	To      Position
 	Capture *Slot
+
+	MovesSinceLastCapture int
 }
 
 func (this *Move) String() string {
@@ -897,9 +871,13 @@ func (this *Move) String() string {
 		this.From.String() + this.To.String()
 }
 
+func (this *Move) IsPass() bool {
+	return this.From == this.To
+}
+
 func PseudoLegalMoves(Pos Position, piece pc.Piece) []Position {
 	switch piece {
-	case pc.BlackCastleKing, pc.WhiteCastleKing, pc.BlackKing, pc.WhiteKing:
+	case pc.BlackKing, pc.WhiteKing:
 		return genKingMoves(Pos)
 	case pc.BlackHorsie, pc.WhiteHorsie:
 		return genHorsieMoves(Pos)
@@ -907,12 +885,11 @@ func PseudoLegalMoves(Pos Position, piece pc.Piece) []Position {
 		return genQueenMoves(Pos)
 	case pc.BlackBishop, pc.WhiteBishop:
 		return genBishopMoves(Pos)
-	case pc.BlackRook, pc.WhiteRook,
-		pc.BlackMovedRook, pc.WhiteMovedRook:
+	case pc.BlackRook, pc.WhiteRook:
 		return genRookMoves(Pos)
-	case pc.BlackMovedPawn, pc.BlackPawn:
+	case pc.BlackPawn:
 		return genBlackPawnMoves(Pos)
-	case pc.WhiteMovedPawn, pc.WhitePawn:
+	case pc.WhitePawn:
 		return genWhitePawnMoves(Pos)
 	}
 	return nil

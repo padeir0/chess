@@ -1,12 +1,25 @@
-# Chess
+# Simplified Chess
 
-Implements a command line UI for chess and
-a simple mailbox chess engine.
-
-The goal is to have a 1500+ elo engine, eventually implementing UCI,
-both for the engine and the UI.
-
+Implements a command line UI for simplified chess and a chess engine.
+The goal is to have a 1500+ elo engine.
 Currently it does only marginally better than random moves.
+
+## Rules
+
+Rules differing from standard chess:
+
+ - No check or checkmate, the game is won by capturing the king
+ - King can put himself into check (possibly losing the game)
+ - Passing your turn is allowed
+ - If both players pass turns successively, the game ends in a draw
+ - No castling
+ - No en passant
+ - Pawns move only a single square
+ - No repetition rules
+ - Pawns promote automatically to queens
+ - 30 moves without a capture ends in a draw
+
+The rest is the same as classical chess (i think).
 
 ## Commands
 

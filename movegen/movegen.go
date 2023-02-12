@@ -3,7 +3,6 @@ package movegen
 import (
 	"chess/game"
 	pc "chess/game/piece"
-	pr "chess/game/promotion"
 )
 
 func ConsumeAll(mg *MoveGenerator) []*game.Move {
@@ -11,7 +10,7 @@ func ConsumeAll(mg *MoveGenerator) []*game.Move {
 	mv := mg.Next()
 	for mv != nil {
 		output = append(output, mv)
-		mg.g.UnmakeMove(mv)
+		mg.g.UnMove()
 		mv = mg.Next()
 	}
 	return output
@@ -63,13 +62,16 @@ func (this *MoveGenerator) Next() *game.Move {
 		for this.currPseudo < len(this.pseudoLegal.To) {
 			to := this.pseudoLegal.To[this.currPseudo]
 			this.currPseudo++
-			ok, capture := this.g.Move(this.pseudoLegal.From, to, pr.Queen)
+			lastCapt := this.g.MovesSinceLastCapture
+			ok, capture := this.g.Move(this.pseudoLegal.From, to)
 			if ok {
 				move := &game.Move{
 					Piece:   piece,
 					From:    this.pseudoLegal.From,
 					To:      to,
 					Capture: capture,
+
+					MovesSinceLastCapture: lastCapt,
 				}
 				return move
 			}

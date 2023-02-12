@@ -4,9 +4,8 @@ type Piece byte
 
 func (this Piece) IsWhite() bool {
 	switch this {
-	case WhiteQueen, WhiteKing, WhiteCastleKing, WhiteBishop,
-		WhiteRook, WhiteMovedRook, WhiteHorsie, WhitePawn,
-		WhiteMovedPawn:
+	case WhiteQueen, WhiteKing, WhiteBishop,
+		WhiteRook, WhiteHorsie, WhitePawn:
 		return true
 	}
 	return false
@@ -14,9 +13,8 @@ func (this Piece) IsWhite() bool {
 
 func (this Piece) IsBlack() bool {
 	switch this {
-	case BlackQueen, BlackKing, BlackCastleKing, BlackBishop,
-		BlackRook, BlackMovedRook, BlackHorsie, BlackPawn,
-		BlackMovedPawn:
+	case BlackQueen, BlackKing, BlackBishop,
+		BlackRook, BlackHorsie, BlackPawn:
 		return true
 	}
 	return false
@@ -24,8 +22,7 @@ func (this Piece) IsBlack() bool {
 
 func (this Piece) IsPawnLike() bool {
 	switch this {
-	case BlackPawn, WhitePawn,
-		BlackMovedPawn, WhiteMovedPawn:
+	case BlackPawn, WhitePawn:
 		return true
 	}
 	return false
@@ -33,8 +30,7 @@ func (this Piece) IsPawnLike() bool {
 
 func (this Piece) IsKingLike() bool {
 	switch this {
-	case BlackKing, WhiteKing,
-		BlackCastleKing, WhiteCastleKing:
+	case BlackKing, WhiteKing:
 		return true
 	}
 	return false
@@ -66,8 +62,7 @@ func (this Piece) IsQueenLike() bool {
 
 func (this Piece) IsRookLike() bool {
 	switch this {
-	case BlackRook, WhiteRook,
-		BlackMovedRook, WhiteMovedRook:
+	case BlackRook, WhiteRook:
 		return true
 	}
 	return false
@@ -81,23 +76,17 @@ func (this Piece) String() string {
 		return " "
 
 	case WhiteQueen, BlackQueen:
-		return "W"
-	case WhiteCastleKing, BlackCastleKing:
-		return "K"
+		return "Q"
 	case WhiteKing, BlackKing:
-		return "Ḱ"
+		return "K"
 	case WhiteBishop, BlackBishop:
 		return "B"
 	case WhiteRook, BlackRook:
 		return "R"
-	case WhiteMovedRook, BlackMovedRook:
-		return "Ŕ"
 	case WhiteHorsie, BlackHorsie:
-		return "H"
+		return "N"
 	case WhitePawn, BlackPawn:
 		return "P"
-	case WhiteMovedPawn, BlackMovedPawn:
-		return "Ṕ"
 	}
 	panic("should not be reached")
 }
@@ -106,23 +95,17 @@ const (
 	InvalidPiece Piece = iota
 	Empty
 
-	WhiteMovedPawn
 	WhitePawn
 	WhiteHorsie
 	WhiteBishop
 	WhiteRook
-	WhiteMovedRook
 	WhiteQueen
 	WhiteKing
-	WhiteCastleKing
 
-	BlackMovedPawn
 	BlackPawn
 	BlackHorsie
 	BlackBishop
 	BlackRook
-	BlackMovedRook
 	BlackQueen
 	BlackKing
-	BlackCastleKing
 )
