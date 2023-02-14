@@ -5,7 +5,7 @@ type Piece byte
 func (this Piece) IsWhite() bool {
 	switch this {
 	case WhiteQueen, WhiteKing, WhiteBishop,
-		WhiteRook, WhiteHorsie, WhitePawn:
+		WhiteRook, WhiteKnight, WhitePawn:
 		return true
 	}
 	return false
@@ -14,7 +14,7 @@ func (this Piece) IsWhite() bool {
 func (this Piece) IsBlack() bool {
 	switch this {
 	case BlackQueen, BlackKing, BlackBishop,
-		BlackRook, BlackHorsie, BlackPawn:
+		BlackRook, BlackKnight, BlackPawn:
 		return true
 	}
 	return false
@@ -36,9 +36,9 @@ func (this Piece) IsKingLike() bool {
 	return false
 }
 
-func (this Piece) IsHorsieLike() bool {
+func (this Piece) IsKnightLike() bool {
 	switch this {
-	case BlackHorsie, WhiteHorsie:
+	case BlackKnight, WhiteKnight:
 		return true
 	}
 	return false
@@ -83,7 +83,7 @@ func (this Piece) String() string {
 		return "B"
 	case WhiteRook, BlackRook:
 		return "R"
-	case WhiteHorsie, BlackHorsie:
+	case WhiteKnight, BlackKnight:
 		return "N"
 	case WhitePawn, BlackPawn:
 		return "P"
@@ -96,14 +96,14 @@ const (
 	Empty
 
 	WhitePawn
-	WhiteHorsie
+	WhiteKnight
 	WhiteBishop
 	WhiteRook
 	WhiteQueen
 	WhiteKing
 
 	BlackPawn
-	BlackHorsie
+	BlackKnight
 	BlackBishop
 	BlackRook
 	BlackQueen

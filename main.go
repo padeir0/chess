@@ -4,6 +4,7 @@ import (
 	xcmd "chess/command"
 	ck "chess/command/commandkind"
 	game "chess/game"
+	ifaces "chess/interfaces"
 
 	"chess/engines"
 	"chess/movegen"
@@ -159,7 +160,7 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 }
 
 func enginePlay(cli *cliState) {
-	engines.Default.Play(cli.Curr)
+	engines.MinimaxII_Psqt.Play(cli.Curr)
 }
 
 func isOver(cli *cliState) bool {
@@ -182,12 +183,12 @@ func doSelfPlay(cli *cliState) {
 		if cli.Curr.BlackTurn {
 			fmt.Println("BLACK -------------")
 			start := time.Now()
-			engines.Default.Play(cli.Curr)
+			engines.MinimaxII.Play(cli.Curr)
 			fmt.Printf("BLACK: %v\n", time.Since(start))
 		} else {
 			fmt.Println("WHITE --------------")
 			start := time.Now()
-			engines.Default.Play(cli.Curr)
+			engines.MinimaxII.Play(cli.Curr)
 			fmt.Printf("WHITE: %v\n", time.Since(start))
 		}
 		fmt.Println(cli.Curr.Board.String())
@@ -196,12 +197,20 @@ func doSelfPlay(cli *cliState) {
 }
 
 type engineScore struct {
-	eng   game.Engine
+	eng   ifaces.Engine
 	score float64
 	times []time.Duration
 }
 
-func play10x(A, B game.Engine) {
+func makeBoards(number int) []*game.Board {
+	boards := make([]*game.Board, number)
+	for i := 0; i < number; i++ {
+		boards[i] = game.ShuffledBoard()
+	}
+	return boards
+}
+
+func play10x(A, B ifaces.Engine) {
 	white := &engineScore{
 		eng:   A,
 		score: 0,
@@ -212,16 +221,12 @@ func play10x(A, B game.Engine) {
 		score: 0,
 		times: []time.Duration{},
 	}
+	var numOfBoards = 9
+	var totalPlays = (numOfBoards * 2) + 1
+	boards := makeBoards(numOfBoards)
 	init := time.Now()
-	boards := []*game.Board{
-		game.ShuffledBoard(),
-		game.ShuffledBoard(),
-		game.ShuffledBoard(),
-		game.ShuffledBoard(),
-		game.ShuffledBoard(),
-	}
-	for i := 0; i < 10; i++ {
-		g := game.InitialGame(boards[i%5])
+	for i := 0; i < totalPlays; i++ {
+		g := game.InitialGame(boards[i%numOfBoards])
 		for !g.IsOver {
 			if g.BlackTurn {
 				start := time.Now()
@@ -242,7 +247,7 @@ func play10x(A, B game.Engine) {
 		case rs.BlackWins:
 			black.score += 1
 		}
-		fmt.Printf("%v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
+		fmt.Printf("white %v %0.1f x %0.1f %v black, board %v\n", white.eng.String(), white.score, black.score, black.eng.String(), i%numOfBoards)
 
 		// swap
 		b := black

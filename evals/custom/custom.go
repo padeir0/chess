@@ -1,11 +1,13 @@
-package matposmob
+package custom
 
 import (
 	"chess/game"
 	pc "chess/game/piece"
 	rs "chess/game/result"
-	"fmt"
+	ifaces "chess/interfaces"
 )
+
+var _ ifaces.Evaluator = Evaluate
 
 // evaluates material, position and mobility:
 //     pawn structure
@@ -27,6 +29,8 @@ func Evaluate(g *game.GameState) int {
 			return 10000
 		case rs.BlackWins:
 			return -10000
+		case rs.Draw:
+			return 0
 		}
 	}
 	var total int = 0
@@ -52,37 +56,6 @@ func Evaluate(g *game.GameState) int {
 		}
 		total -= getPieceWeight(g, pinfo) + centerTable[slot.Pos.Row*8+slot.Pos.Column]
 	}
-	return total
-}
-
-func EvaluatePrint(g *game.GameState) int {
-	var total int = 0
-	pinfos := []*PieceInfo{}
-	for _, slot := range g.WhitePieces {
-		if slot.IsInvalid() {
-			continue
-		}
-		pinfo := &PieceInfo{
-			Piece:   slot.Piece,
-			Pos:     slot.Pos,
-			IsBlack: false,
-		}
-		total += getPieceWeight(g, pinfo) + centerTable[slot.Pos.Row*8+slot.Pos.Column]
-		pinfos = append(pinfos, pinfo)
-	}
-	for _, slot := range g.BlackPieces {
-		if slot.IsInvalid() {
-			continue
-		}
-		pinfo := &PieceInfo{
-			Piece:   slot.Piece,
-			Pos:     slot.Pos,
-			IsBlack: true,
-		}
-		total -= getPieceWeight(g, pinfo) + centerTable[slot.Pos.Row*8+slot.Pos.Column]
-		pinfos = append(pinfos, pinfo)
-	}
-	metrics(pinfos)
 	return total
 }
 
@@ -95,16 +68,6 @@ var centerTable = [64]int{
 	0, 0, 3, 3, 3, 3, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0,
-}
-
-func metrics(pinfos []*PieceInfo) {
-	for i, pinfo := range pinfos {
-		fmt.Printf("%v %v: %v\t", pinfo.Piece, pinfo.Pos, pinfo.Weight)
-		if i%4 == 0 {
-			fmt.Println()
-		}
-	}
-	fmt.Println()
 }
 
 type PieceInfo struct {
@@ -128,7 +91,7 @@ func getPieceWeight(g *game.GameState, pinfo *PieceInfo) int {
 		pieceWeight = 700 + rookMobility(g, pinfo)
 	} else if pinfo.Piece.IsBishopLike() {
 		pieceWeight = bishopWeight(g, pinfo)
-	} else if pinfo.Piece.IsHorsieLike() {
+	} else if pinfo.Piece.IsKnightLike() {
 		pieceWeight = 300 + horsieMobility(g, pinfo)
 	} else if pinfo.Piece.IsPawnLike() {
 		pieceWeight = pawnWeight(g, pinfo)

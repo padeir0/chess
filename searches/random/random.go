@@ -2,11 +2,14 @@ package random
 
 import (
 	"chess/game"
+	ifaces "chess/interfaces"
 	"chess/movegen"
 	"math/rand"
 )
 
-func BestMove(g *game.GameState, eval game.Evaluator) *game.Move {
+var _ ifaces.Search = BestMove
+
+func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 	newG := g.Copy()
 	mvgen := movegen.NewMoveGenerator(newG)
 	moves := movegen.ConsumeAll(mvgen)

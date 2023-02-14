@@ -10,34 +10,6 @@ import (
 	"strconv"
 )
 
-type Engine interface {
-	Play(g *GameState)
-	String() string
-}
-
-// BasicEngine does evaluation only on leaf nodes
-// and does not use any form of precomputation
-type BasicEngine struct {
-	Name   string
-	Search Search
-	Eval   Evaluator
-}
-
-func (this *BasicEngine) Play(g *GameState) {
-	bestMove := this.Search(g, this.Eval)
-	ok, _ := g.Move(bestMove.From, bestMove.To)
-	if !ok {
-		panic("engine made ilegal move")
-	}
-}
-
-func (this *BasicEngine) String() string {
-	return this.Name
-}
-
-type Search func(*GameState, Evaluator) *Move
-type Evaluator func(*GameState) int
-
 func debugBoard(slots []*Slot) *Board {
 	b := Board{}
 	for i := 0; i < 64; i++ {
@@ -52,7 +24,7 @@ func debugBoard(slots []*Slot) *Board {
 }
 
 func ShuffledBoard() *Board {
-	bag := []pc.Piece{pc.BlackRook, pc.BlackHorsie, pc.BlackBishop, pc.BlackQueen, pc.BlackKing, pc.BlackBishop, pc.BlackHorsie, pc.BlackRook}
+	bag := []pc.Piece{pc.BlackRook, pc.BlackKnight, pc.BlackBishop, pc.BlackQueen, pc.BlackKing, pc.BlackBishop, pc.BlackKnight, pc.BlackRook}
 	rand.Shuffle(len(bag), func(i, j int) {
 		a := bag[i]
 		bag[i] = bag[j]
@@ -65,8 +37,8 @@ func ShuffledBoard() *Board {
 		switch blackPiece {
 		case pc.BlackRook:
 			whitePiece = pc.WhiteRook
-		case pc.BlackHorsie:
-			whitePiece = pc.WhiteHorsie
+		case pc.BlackKnight:
+			whitePiece = pc.WhiteKnight
 		case pc.BlackBishop:
 			whitePiece = pc.WhiteBishop
 		case pc.BlackQueen:
@@ -81,14 +53,14 @@ func ShuffledBoard() *Board {
 
 func InitialBoard() *Board {
 	return &Board{
-		pc.BlackRook, pc.BlackHorsie, pc.BlackBishop, pc.BlackQueen, pc.BlackKing, pc.BlackBishop, pc.BlackHorsie, pc.BlackRook,
+		pc.BlackRook, pc.BlackKnight, pc.BlackBishop, pc.BlackQueen, pc.BlackKing, pc.BlackBishop, pc.BlackKnight, pc.BlackRook,
 		pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn, pc.BlackPawn,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty, pc.Empty,
 		pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn, pc.WhitePawn,
-		pc.WhiteRook, pc.WhiteHorsie, pc.WhiteBishop, pc.WhiteQueen, pc.WhiteKing, pc.WhiteBishop, pc.WhiteHorsie, pc.WhiteRook,
+		pc.WhiteRook, pc.WhiteKnight, pc.WhiteBishop, pc.WhiteQueen, pc.WhiteKing, pc.WhiteBishop, pc.WhiteKnight, pc.WhiteRook,
 	}
 }
 
@@ -478,7 +450,7 @@ func (g *GameState) IsValidMove(from, to Position) (bool, *Slot) {
 	case pc.BlackKing, pc.WhiteKing:
 		return isValidMovedKingMove(g, from, to)
 
-	case pc.BlackHorsie, pc.WhiteHorsie:
+	case pc.BlackKnight, pc.WhiteKnight:
 		return isValidHorsieMove(g, from, to)
 
 	case pc.BlackQueen, pc.WhiteQueen:
@@ -955,7 +927,7 @@ func PseudoLegalMoves(g *GameState, Pos Position, piece pc.Piece) []Position {
 	switch piece {
 	case pc.BlackKing, pc.WhiteKing:
 		return genKingMoves(Pos)
-	case pc.BlackHorsie, pc.WhiteHorsie:
+	case pc.BlackKnight, pc.WhiteKnight:
 		return genHorsieMoves(Pos)
 	case pc.BlackQueen, pc.WhiteQueen:
 		return genQueenMoves(g, Pos)

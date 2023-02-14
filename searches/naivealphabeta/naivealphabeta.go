@@ -1,14 +1,15 @@
-package minimax
+package naivealphabeta
 
 import (
 	"chess/game"
 	ifaces "chess/interfaces"
 	"chess/movegen"
 	. "chess/searches/common"
-	// "fmt"
+	"fmt"
 )
 
 var _ ifaces.Search = BestMove
+var _ = fmt.Sprintf("please stop bothering me, Go")
 
 func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 	n := &Node{
@@ -16,27 +17,27 @@ func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 		Score: 314159,
 	}
 	newG := g.Copy()
-	bestMove := miniMax(newG, n, depth, eval)
+	bestMove := alphabeta(newG, n, MinusInf, PlusInf, depth, eval)
 
-	//fmt.Sprintln(n.NextMoves(g.BlackTurn))
-	//fmt.Sprintln("Best Move: ", bestMove.Move)
-	//fmt.Sprintln("Best Score: ", bestMove.Score)
+	//fmt.Println(n.NextMoves(g.BlackTurn))
+	//fmt.Println("Best Move: ", bestMove.Move)
+	//fmt.Println("Best Score: ", bestMove.Score)
 
 	return bestMove.Move
 }
 
-func miniMax(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) *Node {
+func alphabeta(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifaces.Evaluator) *Node {
 	if depth == 0 || g.IsOver {
 		n.Score = eval(g)
 		return n
 	}
 	if g.BlackTurn {
-		return minimizingPlayer(g, n, depth, eval)
+		return minimizingPlayer(g, n, alpha, beta, depth, eval)
 	}
-	return maximizingPlayer(g, n, depth, eval)
+	return maximizingPlayer(g, n, alpha, beta, depth, eval)
 }
 
-func maximizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) *Node {
+func maximizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
 	var bestMove *Node
 	for {
@@ -45,18 +46,24 @@ func maximizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 			break
 		}
 		leaf := &Node{Move: mv}
-		miniMax(g, leaf, depth-1, eval)
+		alphabeta(g, leaf, alpha, beta, depth-1, eval)
 		g.UnMove()
 		// for debugging
 		// n.AddLeaf(leaf)
 
 		bestMove = Max(bestMove, leaf)
+		if bestMove.Score > alpha {
+			alpha = bestMove.Score
+		}
+		if beta < alpha {
+			break
+		}
 	}
 	n.Score = reduce(bestMove.Score)
 	return bestMove
 }
 
-func minimizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) *Node {
+func minimizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
 	var bestMove *Node
 	for {
@@ -65,12 +72,18 @@ func minimizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 			break
 		}
 		leaf := &Node{Move: mv}
-		miniMax(g, leaf, depth-1, eval)
+		alphabeta(g, leaf, alpha, beta, depth-1, eval)
 		g.UnMove()
 		// for debugging
 		// n.AddLeaf(leaf)
 
 		bestMove = Min(bestMove, leaf)
+		if bestMove.Score < beta {
+			beta = bestMove.Score
+		}
+		if beta < alpha {
+			break
+		}
 	}
 	n.Score = reduce(bestMove.Score)
 	return bestMove
