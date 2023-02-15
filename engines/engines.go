@@ -11,6 +11,7 @@ import (
 	"chess/searches/alphabeta"
 	"chess/searches/minimax"
 	"chess/searches/negamax"
+	"chess/searches/quiescence"
 	"chess/searches/randcapt"
 	"chess/searches/random"
 )
@@ -35,6 +36,13 @@ var AllEngines = map[string]Engine{
 	"alphabetaII":      AlphaBetaII,
 	"alphabetaII_mat":  AlphaBetaII_Mat,
 	"alphabetaII_psqt": AlphaBetaII_Psqt,
+
+	"quiescence":        Quiescence,
+	"quiescence_mat":    Quiescence_Mat,
+	"quiescence_psqt":   Quiescence_Psqt,
+	"quiescenceII":      QuiescenceII,
+	"quiescenceII_mat":  QuiescenceII_Mat,
+	"quiescenceII_psqt": QuiescenceII_Psqt,
 }
 
 var Random Engine = &BasicEngine{
@@ -154,4 +162,52 @@ var AlphaBetaII_Psqt Engine = &BasicEngine{
 	Search: alphabeta.BestMove,
 	Eval:   psqt.Evaluate,
 	Depth:  5,
+}
+
+var Quiescence Engine = &IntermediateEngine{
+	Name:     "quiescence",
+	Search:   quiescence.BestMove,
+	Eval:     custom.Evaluate,
+	Depth:    2,
+	ExtDepth: 1,
+}
+
+var Quiescence_Mat Engine = &IntermediateEngine{
+	Name:     "quiescence_Mat",
+	Search:   quiescence.BestMove,
+	Eval:     material.Evaluate,
+	Depth:    2,
+	ExtDepth: 1,
+}
+
+var Quiescence_Psqt Engine = &IntermediateEngine{
+	Name:     "quiescence_Psqt",
+	Search:   quiescence.BestMove,
+	Eval:     psqt.Evaluate,
+	Depth:    2,
+	ExtDepth: 1,
+}
+
+var QuiescenceII Engine = &IntermediateEngine{
+	Name:     "quiescenceII",
+	Search:   quiescence.BestMove,
+	Eval:     custom.Evaluate,
+	Depth:    3,
+	ExtDepth: 1,
+}
+
+var QuiescenceII_Mat Engine = &IntermediateEngine{
+	Name:     "quiescenceII_mat",
+	Search:   quiescence.BestMove,
+	Eval:     material.Evaluate,
+	Depth:    3,
+	ExtDepth: 1,
+}
+
+var QuiescenceII_Psqt Engine = &IntermediateEngine{
+	Name:     "quiescenceII_psqt",
+	Search:   quiescence.BestMove,
+	Eval:     psqt.Evaluate,
+	Depth:    3,
+	ExtDepth: 1,
 }

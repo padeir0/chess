@@ -8,7 +8,7 @@ import (
 	// "fmt"
 )
 
-var _ ifaces.Search = BestMove
+var _ ifaces.BasicSearch = BestMove
 
 func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 	n := &Node{
@@ -79,5 +79,5 @@ func minimizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 // we use this because (for example)
 // a checkmate in 3 is worse than checkmate in 2
 func reduce(a int) int {
-	return (a * 7) / 8
+	return (a * 127) / 128
 }

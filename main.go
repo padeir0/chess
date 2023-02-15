@@ -166,7 +166,7 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 }
 
 func enginePlay(cli *cliState) {
-	engines.AlphaBetaII.Play(cli.Curr)
+	engines.QuiescenceII.Play(cli.Curr)
 }
 
 func isOver(cli *cliState) bool {

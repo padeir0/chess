@@ -12,7 +12,7 @@ var _ ifaces.Evaluator = Evaluate
 
 // evaluates material, position and mobility:
 //     pawn structure
-//         connected pawns, position
+//         connected pawns
 //     mobility
 //         horsie, queen, bishop, rook, pawn
 //     piece value
@@ -240,7 +240,7 @@ func hasBishopPair(g *game.GameState, pinfo *PieceInfo) bool {
 }
 
 func pawnWeight(g *game.GameState, pinfo *PieceInfo) int {
-	var out int = pawnColValue(g, pinfo) + pawnRowMod(g, pinfo)
+	var out int = 100
 	if hasFreeFront(g, pinfo) {
 		out += 25
 	}
@@ -304,56 +304,4 @@ func hasFreeFront(g *game.GameState, pinfo *PieceInfo) bool {
 		}
 	}
 	return true
-}
-
-func pawnColValue(g *game.GameState, pinfo *PieceInfo) int {
-	if isEndgame(g) {
-		switch pinfo.Pos.Column {
-		case 7, 0:
-			return 120
-		case 6, 1:
-			return 110
-		case 5, 2:
-			return 100
-		case 4, 3:
-			return 95
-		}
-	}
-	switch pinfo.Pos.Column {
-	case 7, 0:
-		return 80
-	case 6, 1:
-		return 95
-	case 5, 2:
-		return 110
-	case 4, 3:
-		return 120
-	}
-	return 100
-}
-
-func pawnRowMod(g *game.GameState, pinfo *PieceInfo) int {
-	if pinfo.IsBlack {
-		switch pinfo.Pos.Column {
-		case 1, 0:
-			return -20
-		case 3, 2:
-			return -5
-		case 5, 4:
-			return 10
-		case 7, 6:
-			return 20
-		}
-	}
-	switch pinfo.Pos.Column {
-	case 1, 0:
-		return 20
-	case 3, 2:
-		return 10
-	case 5, 4:
-		return -5
-	case 7, 6:
-		return -20
-	}
-	return 0
 }

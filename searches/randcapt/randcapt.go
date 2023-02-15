@@ -7,7 +7,7 @@ import (
 	"math/rand"
 )
 
-var _ ifaces.Search = BestMove
+var _ ifaces.BasicSearch = BestMove
 
 func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 	newG := g.Copy()

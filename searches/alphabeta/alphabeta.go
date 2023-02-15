@@ -3,12 +3,12 @@ package alphabeta
 import (
 	"chess/game"
 	ifaces "chess/interfaces"
-	movegen "chess/movegen/basic"
+	movegen "chess/movegen/segregated"
 	. "chess/searches/common"
 	"fmt"
 )
 
-var _ ifaces.Search = BestMove
+var _ ifaces.BasicSearch = BestMove
 var _ = fmt.Sprintf("please stop bothering me, Go")
 
 func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
@@ -40,24 +40,20 @@ func alphabeta(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifac
 func maximizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
 	var bestMove *Node
-	for {
-		mv := mg.Next()
-		if mv == nil {
-			break
-		}
+	mv := mg.Next()
+	for mv != nil {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, depth-1, eval)
 		g.UnMove()
-		// for debugging
-		// n.AddLeaf(leaf)
 
 		bestMove = Max(bestMove, leaf)
 		if leaf.Score > alpha {
 			alpha = bestMove.Score
 		}
-		if beta < alpha {
+		if beta+1 < alpha {
 			break
 		}
+		mv = mg.Next()
 	}
 	n.Score = reduce(bestMove.Score)
 	return bestMove
@@ -66,24 +62,20 @@ func maximizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, ev
 func minimizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
 	var bestMove *Node
-	for {
-		mv := mg.Next()
-		if mv == nil {
-			break
-		}
+	mv := mg.Next()
+	for mv != nil {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, depth-1, eval)
 		g.UnMove()
-		// for debugging
-		// n.AddLeaf(leaf)
 
 		bestMove = Min(bestMove, leaf)
 		if leaf.Score < beta {
 			beta = bestMove.Score
 		}
-		if beta < alpha {
+		if beta+1 < alpha {
 			break
 		}
+		mv = mg.Next()
 	}
 	n.Score = reduce(bestMove.Score)
 	return bestMove
@@ -91,6 +83,12 @@ func minimizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, ev
 
 // we use this because (for example)
 // a checkmate in 3 is worse than checkmate in 2
+// !!!
+//     it's very important to tune this on AlphaBeta
+//     since it may lead to bad pruning
+//     and it makes AlphaBeta perform WORSE
+//     the deeper you go
+// !!!
 func reduce(a int) int {
-	return (a * 7) / 8
+	return (a * 1023) / 1024
 }
