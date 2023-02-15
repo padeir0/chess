@@ -15,8 +15,8 @@ func debugBoard(slots []*Slot) *Board {
 	for i := 0; i < 64; i++ {
 		b[i] = pc.Empty
 	}
-	b.SetPos(Position{Row: 0, Column: 4}, pc.BlackKing)
-	b.SetPos(Position{Row: 7, Column: 4}, pc.WhiteKing)
+	b.SetPos(Point{Row: 0, Column: 4}, pc.BlackKing)
+	b.SetPos(Point{Row: 7, Column: 4}, pc.WhiteKing)
 	for _, slot := range slots {
 		b.SetPos(slot.Pos, slot.Piece)
 	}
@@ -89,7 +89,7 @@ func (this *Board) String() string {
 }
 
 type Highlight struct {
-	Pos   Position
+	Pos   Point
 	Color ac.Color
 }
 
@@ -122,7 +122,7 @@ func (this *Board) Show(hls []Highlight) string {
 	return output
 }
 
-func (this *Board) AtPos(pos Position) pc.Piece {
+func (this *Board) AtPos(pos Point) pc.Piece {
 	return (*this)[pos.Column+8*pos.Row]
 }
 
@@ -130,7 +130,7 @@ func (this *Board) At(row, column int) pc.Piece {
 	return (*this)[column+8*row]
 }
 
-func (this *Board) SetPos(pos Position, s pc.Piece) {
+func (this *Board) SetPos(pos Point, s pc.Piece) {
 	(*this)[pos.Column+8*pos.Row] = s
 }
 
@@ -138,7 +138,7 @@ func (this *Board) Set(row, column int, s pc.Piece) {
 	(*this)[column+8*row] = s
 }
 
-func (this *Board) Pop(pos Position) pc.Piece {
+func (this *Board) Pop(pos Point) pc.Piece {
 	i := pos.Column + 8*pos.Row
 	ret := (*this)[i]
 	(*this)[i] = pc.Empty
@@ -147,7 +147,7 @@ func (this *Board) Pop(pos Position) pc.Piece {
 
 type Slot struct {
 	Piece pc.Piece
-	Pos   Position
+	Pos   Point
 }
 
 func (this Slot) IsValid() bool {
@@ -158,12 +158,12 @@ func (this Slot) IsInvalid() bool {
 	return this.Piece == pc.Empty || this.Piece == pc.InvalidPiece
 }
 
-func NewPosition(s string) Position {
+func NewPosition(s string) Point {
 	col := s[0]
 	row := s[1]
 	if col >= 'a' && col <= 'h' &&
 		row >= '1' && row <= '8' {
-		pos := Position{
+		pos := Point{
 			Column: int(col - 'a'),
 			Row:    7 - int(row-'1'),
 		}
@@ -172,22 +172,22 @@ func NewPosition(s string) Position {
 	panic("invalid position string")
 }
 
-type Position struct {
+type Point struct {
 	Row    int // 1 2 3 4 5 6 7 8
 	Column int // a b c d e f g h
 }
 
-func (this Position) IsValid() bool {
+func (this Point) IsValid() bool {
 	return this.Column >= 0 && this.Column <= 7 &&
 		this.Row >= 0 && this.Row <= 7
 }
 
-func (this Position) IsInvalid() bool {
+func (this Point) IsInvalid() bool {
 	return this.Column < 0 || this.Column > 7 ||
 		this.Row < 0 || this.Row > 7
 }
 
-func (this Position) String() string {
+func (this Point) String() string {
 	col := rune(this.Column) + 'a'
 	row := (7 - rune(this.Row)) + '1'
 	return string(col) + string(row)
@@ -198,8 +198,8 @@ func InitialGame(board *Board) *GameState {
 		BlackTurn: false,
 		Board:     *board,
 
-		BlackKingPosition: Position{Row: 0, Column: 4},
-		WhiteKingPosition: Position{Row: 7, Column: 4},
+		BlackKingPosition: Point{Row: 0, Column: 4},
+		WhiteKingPosition: Point{Row: 7, Column: 4},
 
 		BlackPieces: []Slot{},
 		WhitePieces: []Slot{},
@@ -215,7 +215,7 @@ func InitialGame(board *Board) *GameState {
 
 	for i, piece := range game.Board {
 		if piece != pc.Empty {
-			position := Position{Column: i % 8, Row: i / 8}
+			position := Point{Column: i % 8, Row: i / 8}
 			slot := Slot{Piece: piece, Pos: position}
 			if piece.IsWhite() {
 				game.WhitePieces = append(game.WhitePieces, slot)
@@ -291,8 +291,8 @@ type GameState struct {
 	Board     Board
 
 	// to check for Checks
-	BlackKingPosition Position
-	WhiteKingPosition Position
+	BlackKingPosition Point
+	WhiteKingPosition Point
 
 	BlackPieces []Slot
 	WhitePieces []Slot
@@ -350,11 +350,11 @@ func (this *GameState) Copy() *GameState {
 
 var NullMove = &Move{
 	Piece: pc.InvalidPiece,
-	From: Position{
+	From: Point{
 		Row:    0,
 		Column: 0,
 	},
-	To: Position{
+	To: Point{
 		Row:    0,
 		Column: 0,
 	},
@@ -363,7 +363,7 @@ var NullMove = &Move{
 
 // returns if the move was sucessful
 // passing your turn is represented by from == to
-func (this *GameState) Move(from, to Position) (bool, *Slot) {
+func (this *GameState) Move(from, to Point) (bool, *Slot) {
 	if this.IsOver {
 		return false, nil
 	}
@@ -437,7 +437,7 @@ func (this *GameState) Move(from, to Position) (bool, *Slot) {
 }
 
 // returns if its valid and the position of the captured piece, if any
-func (g *GameState) IsValidMove(from, to Position) (bool, *Slot) {
+func (g *GameState) IsValidMove(from, to Point) (bool, *Slot) {
 	if from.IsInvalid() || to.IsInvalid() {
 		return false, nil
 	}
@@ -470,7 +470,7 @@ func (g *GameState) IsValidMove(from, to Position) (bool, *Slot) {
 	panic("oh no!")
 }
 
-func (this *GameState) IsAttacked(pos Position, isBlack bool) bool {
+func (this *GameState) IsAttacked(pos Point, isBlack bool) bool {
 	attackers := &this.BlackPieces
 	if isBlack {
 		attackers = &this.WhitePieces
@@ -488,7 +488,7 @@ func (this *GameState) IsAttacked(pos Position, isBlack bool) bool {
 	return false
 }
 
-func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to Position) {
+func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to Point) {
 	if piece == pc.BlackKing {
 		this.BlackKingPosition = to
 	}
@@ -510,7 +510,7 @@ func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to 
 		if capture != nil {
 			for i, slot := range this.BlackPieces {
 				if slot.IsValid() && slot.Pos == capture.Pos {
-					this.BlackPieces[i] = Slot{pc.Empty, Position{0, 0}}
+					this.BlackPieces[i] = Slot{pc.Empty, Point{0, 0}}
 					break
 				}
 			}
@@ -529,7 +529,7 @@ func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to 
 		if capture != nil {
 			for i, slot := range this.WhitePieces {
 				if slot.IsValid() && slot.Pos == capture.Pos {
-					this.WhitePieces[i] = Slot{pc.Empty, Position{0, 0}}
+					this.WhitePieces[i] = Slot{pc.Empty, Point{0, 0}}
 					break
 				}
 			}
@@ -538,7 +538,7 @@ func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to 
 	}
 }
 
-func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to Position) {
+func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to Point) {
 	if piece == pc.BlackKing {
 		this.BlackKingPosition = from
 	}
@@ -613,7 +613,7 @@ func (this *GameState) UnMove() {
   P
  ###
 */
-func isValidBlackPawnMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidBlackPawnMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check shape of movement
 	if to.Row-from.Row != 1 ||
 		to.Column-from.Column > 1 || to.Column-from.Column < -1 {
@@ -626,7 +626,7 @@ func isValidBlackPawnMove(g *GameState, from, to Position) (bool, *Slot) {
  ###
   P
 */
-func isValidWhitePawnMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidWhitePawnMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check shape of movement
 	if to.Row-from.Row != -1 ||
 		to.Column-from.Column > 1 || to.Column-from.Column < -1 {
@@ -635,7 +635,7 @@ func isValidWhitePawnMove(g *GameState, from, to Position) (bool, *Slot) {
 	return isValidPawnMove(g, from, to)
 }
 
-func isValidPawnMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidPawnMove(g *GameState, from, to Point) (bool, *Slot) {
 	var capture *Slot = nil
 	fromPiece := g.Board.AtPos(from)
 	toPiece := g.Board.AtPos(to)
@@ -667,7 +667,7 @@ func isValidPawnMove(g *GameState, from, to Position) (bool, *Slot) {
 	return true, capture
 }
 
-func isValidQueenMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidQueenMove(g *GameState, from, to Point) (bool, *Slot) {
 	ok, slot := isValidBishopMove(g, from, to)
 	if ok {
 		return ok, slot
@@ -679,7 +679,7 @@ func isValidQueenMove(g *GameState, from, to Position) (bool, *Slot) {
 	return false, nil
 }
 
-func isValidRookMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidRookMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check if shape is rook-like
 	if from.Column != to.Column && from.Row != to.Row {
 		return false, nil
@@ -709,7 +709,7 @@ func isValidRookMove(g *GameState, from, to Position) (bool, *Slot) {
 	return true, capture
 }
 
-func isValidBishopMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidBishopMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check if shape is bishop-like
 	if Abs(int32(from.Column-to.Column)) != Abs(int32(from.Row-to.Row)) {
 		return false, nil
@@ -738,7 +738,7 @@ func isValidBishopMove(g *GameState, from, to Position) (bool, *Slot) {
 	return true, capture
 }
 
-func isValidKingMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidKingMove(g *GameState, from, to Point) (bool, *Slot) {
 	// TODO: validate castling
 	return isValidMovedKingMove(g, from, to)
 }
@@ -748,7 +748,7 @@ func isValidKingMove(g *GameState, from, to Position) (bool, *Slot) {
  #K# (0,  -1)         (0,  1)
  ### (1,  -1) (1,  0) (1,  1)
 */
-func isValidMovedKingMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidMovedKingMove(g *GameState, from, to Point) (bool, *Slot) {
 	ColDiff := from.Column - to.Column
 	RowDiff := from.Row - to.Row
 	if !(((ColDiff == 1) || (ColDiff == 0) || (ColDiff == -1)) &&
@@ -780,7 +780,7 @@ func isValidMovedKingMove(g *GameState, from, to Position) (bool, *Slot) {
 #   #  (r+1, c-2)     (r+1, c+2)
  # #     (r+2, c-1) (r+2, c+1)
 */
-func isValidHorsieMove(g *GameState, from, to Position) (bool, *Slot) {
+func isValidHorsieMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check if shape is horsie-like
 	if !((Abs(int32(from.Column-to.Column)) == 2 &&
 		Abs(int32(from.Row-to.Row)) == 1) ||
@@ -814,7 +814,7 @@ diagonals only (bishop-like)
   # #      (3, 2) (3, 4)
  #   #  (4, 1)        (4, 5)
 */
-func bishop_ClosestPieceInWay(g *GameState, from, to Position) *Position {
+func bishop_ClosestPieceInWay(g *GameState, from, to Point) *Point {
 	rowQuant := 1
 	if from.Row > to.Row {
 		rowQuant = -1
@@ -824,11 +824,11 @@ func bishop_ClosestPieceInWay(g *GameState, from, to Position) *Position {
 		colQuant = -1
 	}
 
-	currPos := Position{
+	currPos := Point{
 		Row:    from.Row + rowQuant,
 		Column: from.Column + colQuant,
 	}
-	destPos := Position{
+	destPos := Point{
 		Row:    to.Row + rowQuant,
 		Column: to.Column + colQuant,
 	}
@@ -851,7 +851,7 @@ col + row only (rook-like)
 .   #
 .   #
 */
-func rook_ClosestPieceInWay(g *GameState, from, to Position) (Position, bool) {
+func rook_ClosestPieceInWay(g *GameState, from, to Point) (Point, bool) {
 	if from.Column != to.Column {
 		quant := 1
 		if from.Column > to.Column {
@@ -859,7 +859,7 @@ func rook_ClosestPieceInWay(g *GameState, from, to Position) (Position, bool) {
 		}
 		for i := from.Column + quant; i != to.Column+quant; i += quant {
 			if g.Board.At(from.Row, i) != pc.Empty {
-				return Position{
+				return Point{
 					Row:    from.Row,
 					Column: i,
 				}, true
@@ -873,17 +873,17 @@ func rook_ClosestPieceInWay(g *GameState, from, to Position) (Position, bool) {
 		}
 		for i := from.Row + quant; i != to.Row+quant; i += quant {
 			if g.Board.At(i, from.Column) != pc.Empty {
-				return Position{
+				return Point{
 					Row:    i,
 					Column: from.Column,
 				}, true
 			}
 		}
 	}
-	return Position{}, false
+	return Point{}, false
 }
 
-func canPromote(g *GameState, piece pc.Piece, to Position) bool {
+func canPromote(g *GameState, piece pc.Piece, to Point) bool {
 	return (piece == pc.BlackPawn && to.Row == 7) ||
 		(piece == pc.WhitePawn && to.Row == 0)
 }
@@ -902,8 +902,8 @@ func Abs(a int32) int32 {
 
 type Move struct {
 	Piece   pc.Piece
-	From    Position
-	To      Position
+	From    Point
+	To      Point
 	Capture *Slot
 
 	MovesSinceLastCapture int
@@ -923,147 +923,29 @@ func (this *Move) IsPass() bool {
 	return this.From == this.To
 }
 
-func PseudoLegalMoves(g *GameState, Pos Position, piece pc.Piece) []Position {
-	switch piece {
-	case pc.BlackKing, pc.WhiteKing:
-		return genKingMoves(Pos)
-	case pc.BlackKnight, pc.WhiteKnight:
-		return genHorsieMoves(Pos)
-	case pc.BlackQueen, pc.WhiteQueen:
-		return genQueenMoves(g, Pos)
-	case pc.BlackBishop, pc.WhiteBishop:
-		return genBishopMoves(g, Pos)
-	case pc.BlackRook, pc.WhiteRook:
-		return genRookMoves(g, Pos)
-	case pc.BlackPawn:
-		return genBlackPawnMoves(Pos)
-	case pc.WhitePawn:
-		return genWhitePawnMoves(Pos)
-	}
-	return nil
-}
-
-var KingOffsets = []Position{
+var KingOffsets = []Point{
 	{-1, -1}, {-1, 0}, {-1, 1},
 	{0, -1} /*    */, {0, 1},
 	{1, -1}, {1, 0}, {1, 1},
 }
 
-func genKingMoves(pos Position) []Position {
-	output := []Position{}
-	for _, offset := range KingOffsets {
-		newpos := Position{
-			Column: pos.Column + offset.Column,
-			Row:    pos.Row + offset.Row,
-		}
-		output = append(output, newpos)
-	}
-	return output
-}
-
-var BishopOffsets = []Position{
+var BishopOffsets = []Point{
 	{-1, -1} /*   */, {-1, 1},
 
 	{1, -1} /*    */, {1, 1},
 }
 
-var RookOffsets = []Position{
+var RookOffsets = []Point{
 	/*    */ {-1, 0}, /*    */
 	{0, -1} /*    */, {0, 1},
 	/*    */ {1, 0}, /*    */
 }
 
-var HorsieOffsets = []Position{
+var HorsieOffsets = []Point{
 	{-2, -1}, {-2, +1},
 	{-1, -2}, {-1, +2},
 	{+1, -2}, {+1, +2},
 	{+2, -1}, {+2, +1},
-}
-
-func genHorsieMoves(pos Position) []Position {
-	output := []Position{}
-	for _, offset := range HorsieOffsets {
-		newpos := Position{
-			Column: pos.Column + offset.Column,
-			Row:    pos.Row + offset.Row,
-		}
-		output = append(output, newpos)
-	}
-	return output
-}
-
-func genRookMoves(g *GameState, from Position) []Position {
-	output := []Position{}
-	fromPiece := g.Board.AtPos(from)
-	for _, offset := range RookOffsets {
-		for i := 1; i < 7; i++ {
-			pos := Position{
-				Column: from.Column + (offset.Column * i),
-				Row:    from.Row + (offset.Row * i),
-			}
-			if pos.IsInvalid() {
-				break
-			}
-			piece := g.Board.AtPos(pos)
-			if piece == pc.Empty {
-				output = append(output, pos)
-			} else if piece.IsBlack() != fromPiece.IsBlack() {
-				output = append(output, pos)
-				break
-			} else {
-				break
-			}
-		}
-	}
-	return output
-}
-
-func genBishopMoves(g *GameState, from Position) []Position {
-	output := []Position{}
-
-	fromPiece := g.Board.AtPos(from)
-	for _, offset := range BishopOffsets {
-		for i := 1; i < 7; i++ {
-			to := Position{
-				Column: from.Column + (offset.Column * i),
-				Row:    from.Row + (offset.Row * i),
-			}
-			if to.IsInvalid() {
-				break
-			}
-			piece := g.Board.AtPos(to)
-			if piece == pc.Empty {
-				output = append(output, to)
-			} else if piece.IsBlack() != fromPiece.IsBlack() {
-				output = append(output, to)
-				break
-			} else {
-				break
-			}
-		}
-	}
-
-	return output
-}
-
-func genQueenMoves(g *GameState, pos Position) []Position {
-	return append(genBishopMoves(g, pos), genRookMoves(g, pos)...)
-}
-
-func genBlackPawnMoves(pos Position) []Position {
-	return []Position{
-		{Row: pos.Row + 1, Column: pos.Column},
-		{Row: pos.Row + 1, Column: pos.Column - 1},
-		{Row: pos.Row + 1, Column: pos.Column + 1},
-	}
-}
-
-func genWhitePawnMoves(pos Position) []Position {
-	return []Position{
-		{Row: pos.Row - 1, Column: pos.Column},
-		{Row: pos.Row - 1, Column: pos.Column - 1},
-		{Row: pos.Row - 1, Column: pos.Column + 1},
-	}
 }
 
 func orderByValue(a []Slot) {

@@ -1,6 +1,7 @@
 package custom
 
 import (
+	. "chess/evals/common"
 	"chess/game"
 	pc "chess/game/piece"
 	rs "chess/game/result"
@@ -43,7 +44,7 @@ func Evaluate(g *game.GameState) int {
 			Pos:     slot.Pos,
 			IsBlack: false,
 		}
-		total += getPieceWeight(g, pinfo) + centerTable[slot.Pos.Row*8+slot.Pos.Column]
+		total += getPieceWeight(g, pinfo) + GetPositionalWeight(isEndgame(g), false, slot.Piece, slot.Pos)
 	}
 	for _, slot := range g.BlackPieces {
 		if slot.IsInvalid() {
@@ -54,25 +55,14 @@ func Evaluate(g *game.GameState) int {
 			Pos:     slot.Pos,
 			IsBlack: true,
 		}
-		total -= getPieceWeight(g, pinfo) + centerTable[slot.Pos.Row*8+slot.Pos.Column]
+		total -= getPieceWeight(g, pinfo) + GetPositionalWeight(isEndgame(g), true, slot.Piece, slot.Pos)
 	}
 	return total
 }
 
-var centerTable = [64]int{
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 3, 3, 3, 3, 0, 0,
-	0, 0, 5, 15, 15, 5, 0, 0,
-	0, 0, 5, 15, 15, 5, 0, 0,
-	0, 0, 3, 3, 3, 3, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-}
-
 type PieceInfo struct {
 	Piece   pc.Piece
-	Pos     game.Position
+	Pos     game.Point
 	IsBlack bool
 	Weight  int
 }
@@ -109,7 +99,7 @@ func isEndgame(g *game.GameState) bool {
 func protectionWeight(g *game.GameState, pinfo *PieceInfo) int {
 	var weight int = 1
 	for _, offset := range game.KingOffsets {
-		pos := game.Position{
+		pos := game.Point{
 			Column: pinfo.Pos.Column + offset.Column,
 			Row:    pinfo.Pos.Row + offset.Row,
 		}
@@ -135,7 +125,7 @@ func protectionWeight(g *game.GameState, pinfo *PieceInfo) int {
 func horsieMobility(g *game.GameState, pinfo *PieceInfo) int {
 	var mobMod int = 0
 	for _, offset := range game.HorsieOffsets {
-		pos := game.Position{
+		pos := game.Point{
 			Column: pinfo.Pos.Column + offset.Column,
 			Row:    pinfo.Pos.Row + offset.Row,
 		}
@@ -172,7 +162,7 @@ func rookMobility(g *game.GameState, pinfo *PieceInfo) int {
 	var mobMod int = 0
 	for _, offset := range game.RookOffsets {
 		for i := 1; i < 7; i++ {
-			pos := game.Position{
+			pos := game.Point{
 				Column: pinfo.Pos.Column + (offset.Column * i),
 				Row:    pinfo.Pos.Row + (offset.Row * i),
 			}
@@ -201,7 +191,7 @@ func bishopMobility(g *game.GameState, pinfo *PieceInfo) int {
 	var mobMod int = 0
 	for _, offset := range game.BishopOffsets {
 		for i := 1; i < 7; i++ {
-			pos := game.Position{
+			pos := game.Point{
 				Column: pinfo.Pos.Column + (offset.Column * i),
 				Row:    pinfo.Pos.Row + (offset.Row * i),
 			}
@@ -261,24 +251,24 @@ func pawnWeight(g *game.GameState, pinfo *PieceInfo) int {
 }
 
 func isConnectedPawn(g *game.GameState, pinfo *PieceInfo) bool {
-	var left, right game.Position
+	var left, right game.Point
 	var pawn pc.Piece
 	if pinfo.IsBlack {
-		left = game.Position{
+		left = game.Point{
 			Column: pinfo.Pos.Column - 1,
 			Row:    pinfo.Pos.Row - 1,
 		}
-		right = game.Position{
+		right = game.Point{
 			Column: pinfo.Pos.Column - 1,
 			Row:    pinfo.Pos.Row + 1,
 		}
 		pawn = pc.BlackPawn
 	} else {
-		left = game.Position{
+		left = game.Point{
 			Column: pinfo.Pos.Column + 1,
 			Row:    pinfo.Pos.Row - 1,
 		}
-		right = game.Position{
+		right = game.Point{
 			Column: pinfo.Pos.Column + 1,
 			Row:    pinfo.Pos.Row + 1,
 		}

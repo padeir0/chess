@@ -3,7 +3,7 @@ package negamax
 import (
 	"chess/game"
 	ifaces "chess/interfaces"
-	"chess/movegen"
+	movegen "chess/movegen/basic"
 	. "chess/searches/common"
 	"fmt"
 )

@@ -7,7 +7,7 @@ import (
 	ifaces "chess/interfaces"
 
 	"chess/engines"
-	"chess/movegen"
+	seggen "chess/movegen/segregated"
 
 	rs "chess/game/result"
 
@@ -150,8 +150,14 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 	switch whatToShow {
 	case "moves":
 		newG := cli.Curr.Copy()
-		mgen := movegen.NewMoveGenerator(newG)
-		mvs := movegen.ConsumeAll(mgen)
+		mgen := seggen.NewMoveGenerator(newG)
+		mvs := seggen.ConsumeAllQuiet(mgen)
+		hls := game.MoveToHighlight(mvs)
+		fmt.Println(cli.Curr.Board.Show(hls))
+	case "attacks":
+		newG := cli.Curr.Copy()
+		mgen := seggen.NewMoveGenerator(newG)
+		mvs := seggen.ConsumeAllCaptures(mgen)
 		hls := game.MoveToHighlight(mvs)
 		fmt.Println(cli.Curr.Board.Show(hls))
 	default:
@@ -160,7 +166,7 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 }
 
 func enginePlay(cli *cliState) {
-	engines.MinimaxII_Psqt.Play(cli.Curr)
+	engines.AlphaBetaII.Play(cli.Curr)
 }
 
 func isOver(cli *cliState) bool {
@@ -221,7 +227,7 @@ func play10x(A, B ifaces.Engine) {
 		score: 0,
 		times: []time.Duration{},
 	}
-	var numOfBoards = 9
+	var numOfBoards = 29
 	var totalPlays = (numOfBoards * 2) + 1
 	boards := makeBoards(numOfBoards)
 	init := time.Now()

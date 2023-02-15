@@ -68,6 +68,10 @@ func (this Piece) IsRookLike() bool {
 	return false
 }
 
+func (this Piece) IsOccupied() bool {
+	return this != Empty && this != InvalidPiece
+}
+
 func (this Piece) String() string {
 	switch this {
 	case InvalidPiece:

@@ -1,9 +1,9 @@
-package naivealphabeta
+package alphabeta
 
 import (
 	"chess/game"
 	ifaces "chess/interfaces"
-	"chess/movegen"
+	movegen "chess/movegen/basic"
 	. "chess/searches/common"
 	"fmt"
 )
@@ -52,7 +52,7 @@ func maximizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, ev
 		// n.AddLeaf(leaf)
 
 		bestMove = Max(bestMove, leaf)
-		if bestMove.Score > alpha {
+		if leaf.Score > alpha {
 			alpha = bestMove.Score
 		}
 		if beta < alpha {
@@ -78,7 +78,7 @@ func minimizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, ev
 		// n.AddLeaf(leaf)
 
 		bestMove = Min(bestMove, leaf)
-		if bestMove.Score < beta {
+		if leaf.Score < beta {
 			beta = bestMove.Score
 		}
 		if beta < alpha {

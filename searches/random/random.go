@@ -3,7 +3,7 @@ package random
 import (
 	"chess/game"
 	ifaces "chess/interfaces"
-	"chess/movegen"
+	movegen "chess/movegen/basic"
 	"math/rand"
 )
 

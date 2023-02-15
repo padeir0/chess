@@ -8,14 +8,16 @@ import (
 	"chess/evals/material"
 	"chess/evals/psqt"
 
+	"chess/searches/alphabeta"
 	"chess/searches/minimax"
-	"chess/searches/naivealphabeta"
 	"chess/searches/negamax"
+	"chess/searches/randcapt"
 	"chess/searches/random"
 )
 
 var AllEngines = map[string]Engine{
-	"random": Random,
+	"random":   Random,
+	"randcapt": RandCapt,
 
 	"minimax":        Minimax,
 	"minimax_mat":    Minimax_Mat,
@@ -27,14 +29,24 @@ var AllEngines = map[string]Engine{
 	"negamax":   NegaMax,
 	"negamaxII": NegaMaxII,
 
-	"alphabeta":      AlphaBeta,
-	"alphabeta_mat":  AlphaBeta_Mat,
-	"alphabeta_psqt": AlphaBeta_Psqt,
+	"alphabeta":        AlphaBeta,
+	"alphabeta_mat":    AlphaBeta_Mat,
+	"alphabeta_psqt":   AlphaBeta_Psqt,
+	"alphabetaII":      AlphaBetaII,
+	"alphabetaII_mat":  AlphaBetaII_Mat,
+	"alphabetaII_psqt": AlphaBetaII_Psqt,
 }
 
 var Random Engine = &BasicEngine{
 	Name:   "random",
 	Search: random.BestMove,
+	Eval:   func(*game.GameState) int { return 0 },
+	Depth:  0,
+}
+
+var RandCapt Engine = &BasicEngine{
+	Name:   "randcapt",
+	Search: randcapt.BestMove,
 	Eval:   func(*game.GameState) int { return 0 },
 	Depth:  0,
 }
@@ -81,6 +93,13 @@ var MinimaxII_Psqt Engine = &BasicEngine{
 	Depth:  3,
 }
 
+var MinimaxIII_Mat Engine = &BasicEngine{
+	Name:   "minimaxIII_mat",
+	Search: minimax.BestMove,
+	Eval:   material.Evaluate,
+	Depth:  4,
+}
+
 var NegaMax Engine = &BasicEngine{
 	Name:   "negamax",
 	Search: negamax.BestMove,
@@ -97,21 +116,42 @@ var NegaMaxII Engine = &BasicEngine{
 
 var AlphaBeta Engine = &BasicEngine{
 	Name:   "alphabeta",
-	Search: naivealphabeta.BestMove,
+	Search: alphabeta.BestMove,
 	Eval:   custom.Evaluate,
 	Depth:  3,
 }
 
 var AlphaBeta_Mat Engine = &BasicEngine{
 	Name:   "alphabeta_mat",
-	Search: naivealphabeta.BestMove,
+	Search: alphabeta.BestMove,
 	Eval:   material.Evaluate,
 	Depth:  3,
 }
 
 var AlphaBeta_Psqt Engine = &BasicEngine{
 	Name:   "alphabeta_psqt",
-	Search: naivealphabeta.BestMove,
+	Search: alphabeta.BestMove,
 	Eval:   psqt.Evaluate,
 	Depth:  3,
+}
+
+var AlphaBetaII Engine = &BasicEngine{
+	Name:   "alphabetaII",
+	Search: alphabeta.BestMove,
+	Eval:   custom.Evaluate,
+	Depth:  5,
+}
+
+var AlphaBetaII_Mat Engine = &BasicEngine{
+	Name:   "alphabetaII_mat",
+	Search: alphabeta.BestMove,
+	Eval:   material.Evaluate,
+	Depth:  5,
+}
+
+var AlphaBetaII_Psqt Engine = &BasicEngine{
+	Name:   "alphabetaII_psqt",
+	Search: alphabeta.BestMove,
+	Eval:   psqt.Evaluate,
+	Depth:  5,
 }

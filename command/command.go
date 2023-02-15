@@ -24,7 +24,7 @@ func (this *Command) String() string {
 type Operand struct {
 	Label    *string
 	Number   *int64
-	Position *game.Position
+	Position *game.Point
 }
 
 func (this *Operand) String() string {
@@ -158,7 +158,7 @@ type lexeme struct {
 	CommandKind ck.CommandKind
 	Text        string
 	Value       int64
-	Position    game.Position
+	Position    game.Point
 
 	Range _range
 }
@@ -359,7 +359,7 @@ func parseNormal(text string) int64 {
 func position(st *lexer, col, row rune) (*lexeme, *Error) {
 	if col >= 'a' && col <= 'h' &&
 		row >= '1' && row <= '8' {
-		pos := game.Position{
+		pos := game.Point{
 			Column: int(col - 'a'),
 			Row:    7 - int(row-'1'),
 		}
@@ -373,7 +373,7 @@ func position(st *lexer, col, row rune) (*lexeme, *Error) {
 
 	if col >= 'A' && col <= 'H' &&
 		row >= '1' && row <= '8' {
-		pos := game.Position{
+		pos := game.Point{
 			Column: int(col - 'A'),
 			Row:    7 - int(row-'1'),
 		}
@@ -587,7 +587,7 @@ func checkErr(layout string) *Error {
 
 func isValidShow(s string) bool {
 	switch s {
-	case "moves":
+	case "moves", "attacks":
 		return true
 	}
 	return false
