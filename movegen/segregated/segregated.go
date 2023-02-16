@@ -132,7 +132,7 @@ func (this *MoveGenerator) NextQuiet() *game.Move {
 			this.currQuietPseudo++
 			lastCapt := this.g.MovesSinceLastCapture
 			ok, capture := this.g.Move(this.quietPseudo.From, to)
-			if ok {
+			if ok && capture == nil {
 				move := &game.Move{
 					Piece:   piece,
 					From:    this.quietPseudo.From,
@@ -142,6 +142,8 @@ func (this *MoveGenerator) NextQuiet() *game.Move {
 					MovesSinceLastCapture: lastCapt,
 				}
 				return move
+			} else if capture != nil {
+				panic("should not have captured something")
 			}
 		}
 		this.quietPseudo = nil

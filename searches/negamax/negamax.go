@@ -25,7 +25,7 @@ func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 
 func negaMax(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) (int, *Node) {
 	if depth == 0 || g.IsOver {
-		n.Score = eval(g)
+		n.Score = eval(g, depth)
 		return player(g) * n.Score, nil
 	}
 	mg := movegen.NewMoveGenerator(g)

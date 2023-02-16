@@ -37,6 +37,7 @@ const (
 	NO
 	SelfPlay
 	Compare
+	Championship
 
 	Profile
 	StopProfile

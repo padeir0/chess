@@ -5,10 +5,11 @@ import (
 	ifaces "chess/interfaces"
 	movegen "chess/movegen/basic"
 	. "chess/searches/common"
-	// "fmt"
+	"fmt"
 )
 
 var _ ifaces.BasicSearch = BestMove
+var _ = fmt.Sprintf(":)")
 
 func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 	n := &Node{
@@ -18,16 +19,16 @@ func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 	newG := g.Copy()
 	bestMove := miniMax(newG, n, depth, eval)
 
-	//fmt.Sprintln(n.NextMoves(g.BlackTurn))
-	//fmt.Sprintln("Best Move: ", bestMove.Move)
-	//fmt.Sprintln("Best Score: ", bestMove.Score)
+	//fmt.Println(n.NextMoves(g.BlackTurn))
+	//fmt.Println("Best Move: ", bestMove.Move)
+	//fmt.Println("Best Score: ", bestMove.Score)
 
 	return bestMove.Move
 }
 
 func miniMax(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) *Node {
 	if depth == 0 || g.IsOver {
-		n.Score = eval(g)
+		n.Score = eval(g, depth)
 		return n
 	}
 	if g.BlackTurn {
@@ -52,7 +53,7 @@ func maximizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 
 		bestMove = Max(bestMove, leaf)
 	}
-	n.Score = reduce(bestMove.Score)
+	n.Score = bestMove.Score
 	return bestMove
 }
 
@@ -72,12 +73,10 @@ func minimizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 
 		bestMove = Min(bestMove, leaf)
 	}
-	n.Score = reduce(bestMove.Score)
+	n.Score = bestMove.Score
 	return bestMove
 }
 
-// we use this because (for example)
-// a checkmate in 3 is worse than checkmate in 2
 func reduce(a int) int {
-	return (a * 127) / 128
+	return (a * 1023) / 1024
 }

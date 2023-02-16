@@ -9,13 +9,13 @@ import (
 
 var _ ifaces.Evaluator = Evaluate
 
-func Evaluate(g *game.GameState) int {
+func Evaluate(g *game.GameState, depth int) int {
 	if g.IsOver {
 		switch g.Result {
 		case rs.WhiteWins:
-			return 10000
+			return ((10000 * 1023) - (30 - depth)) / 1024
 		case rs.BlackWins:
-			return -10000
+			return ((-10000 * 1023) - (30 - depth)) / 1024
 		case rs.Draw:
 			return 0
 		}

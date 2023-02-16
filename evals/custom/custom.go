@@ -23,7 +23,7 @@ var _ ifaces.Evaluator = Evaluate
 // all values on centipawns, using integers
 
 // maximize for white
-func Evaluate(g *game.GameState) int {
+func Evaluate(g *game.GameState, depth int) int {
 	if g.IsOver {
 		switch g.Result {
 		case rs.WhiteWins:
@@ -71,6 +71,10 @@ const kingWeight int = 10000
 
 func getPieceWeight(g *game.GameState, pinfo *PieceInfo) int {
 	if pinfo.Piece.IsKingLike() {
+		if isEndgame(g) {
+			pinfo.Weight = kingWeight
+			return pinfo.Weight
+		}
 		pinfo.Weight = kingWeight + protectionWeight(g, pinfo)
 		return pinfo.Weight
 	}
@@ -80,7 +84,7 @@ func getPieceWeight(g *game.GameState, pinfo *PieceInfo) int {
 	} else if pinfo.Piece.IsRookLike() {
 		pieceWeight = 700 + rookMobility(g, pinfo)
 	} else if pinfo.Piece.IsBishopLike() {
-		pieceWeight = bishopWeight(g, pinfo)
+		pieceWeight = 300 + bishopMobility(g, pinfo)
 	} else if pinfo.Piece.IsKnightLike() {
 		pieceWeight = 300 + horsieMobility(g, pinfo)
 	} else if pinfo.Piece.IsPawnLike() {
@@ -144,14 +148,6 @@ func horsieMobility(g *game.GameState, pinfo *PieceInfo) int {
 		}
 	}
 	return mobMod
-}
-
-func bishopWeight(g *game.GameState, pinfo *PieceInfo) int {
-	bishopMob := bishopMobility(g, pinfo)
-	if hasBishopPair(g, pinfo) {
-		return 350 + bishopMob
-	}
-	return 300 + bishopMob
 }
 
 func queenMobility(g *game.GameState, pinfo *PieceInfo) int {

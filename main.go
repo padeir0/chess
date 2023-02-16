@@ -7,6 +7,8 @@ import (
 	ifaces "chess/interfaces"
 
 	"chess/engines"
+
+	gentest "chess/movegen"
 	seggen "chess/movegen/segregated"
 
 	rs "chess/game/result"
@@ -14,9 +16,11 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"runtime/pprof"
+	"sort"
 	"time"
 )
 
@@ -87,6 +91,9 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 	case ck.Restore:
 		if len(cmd.Operands) == 0 {
 			cli.Curr = game.InitialGame(game.ShuffledBoard())
+			if !gentest.CompareGens(cli.Curr, 5) {
+				fmt.Println("movement generators don't match")
+			}
 			return
 		}
 		txt := *cmd.Operands[0].Label
@@ -123,6 +130,8 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 		doSelfPlay(cli)
 	case ck.Compare:
 		evalCompare(cli, cmd)
+	case ck.Championship:
+		evalChampionship()
 	case ck.StopProfile:
 		pprof.StopCPUProfile()
 	case ck.Show:
@@ -166,7 +175,7 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 }
 
 func enginePlay(cli *cliState) {
-	engines.QuiescenceII.Play(cli.Curr)
+	engines.QuiescenceIII.Play(cli.Curr)
 }
 
 func isOver(cli *cliState) bool {
@@ -203,9 +212,10 @@ func doSelfPlay(cli *cliState) {
 }
 
 type engineScore struct {
-	eng   ifaces.Engine
-	score float64
-	times []time.Duration
+	eng     ifaces.Engine
+	score   float64
+	times   []time.Duration
+	average time.Duration
 }
 
 func makeBoards(number int) []*game.Board {
@@ -216,7 +226,7 @@ func makeBoards(number int) []*game.Board {
 	return boards
 }
 
-func play10x(A, B ifaces.Engine) {
+func play100x(A, B ifaces.Engine) fight {
 	white := &engineScore{
 		eng:   A,
 		score: 0,
@@ -227,12 +237,24 @@ func play10x(A, B ifaces.Engine) {
 		score: 0,
 		times: []time.Duration{},
 	}
-	var numOfBoards = 29
-	var totalPlays = (numOfBoards * 2) + 1
-	boards := makeBoards(numOfBoards)
 	init := time.Now()
-	for i := 0; i < totalPlays; i++ {
-		g := game.InitialGame(boards[i%numOfBoards])
+	var numOfBoards = 50
+	boards := makeBoards(numOfBoards)
+	playoneside(boards, white, black)
+	playoneside(boards, black, white)
+
+	black.average = average(black.times)
+	black.times = nil
+	white.average = average(white.times)
+	white.times = nil
+	fmt.Printf("Comparison took: %v, Avg. %v: %v, Avg. %v: %v\n", time.Since(init), white.eng.String(), white.average, black.eng.String(), black.average)
+	fmt.Printf("Result: %v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
+	return fight{white, black}
+}
+
+func playoneside(boards []*game.Board, white, black *engineScore) {
+	for i := 0; i < len(boards); i++ {
+		g := game.InitialGame(boards[i])
 		for !g.IsOver {
 			if g.BlackTurn {
 				start := time.Now()
@@ -253,16 +275,7 @@ func play10x(A, B ifaces.Engine) {
 		case rs.BlackWins:
 			black.score += 1
 		}
-		fmt.Printf("white %v %0.1f x %0.1f %v black, board %v\n", white.eng.String(), white.score, black.score, black.eng.String(), i%numOfBoards)
-
-		// swap
-		b := black
-		black = white
-		white = b
 	}
-	fmt.Printf("Comparison took: %v\n", time.Since(init))
-	fmt.Printf("Average time for %v: %v\n", black.eng.String(), average(black.times))
-	fmt.Printf("Average time for %v: %v\n", white.eng.String(), average(white.times))
 }
 
 func evalCompare(cli *cliState, cmd *xcmd.Command) {
@@ -279,7 +292,7 @@ func evalCompare(cli *cliState, cmd *xcmd.Command) {
 		warn("engine not found: ", eng1Name)
 		return
 	}
-	play10x(eng0, eng1)
+	play100x(eng0, eng1)
 }
 
 func average(times []time.Duration) time.Duration {
@@ -288,4 +301,28 @@ func average(times []time.Duration) time.Duration {
 		sum += t
 	}
 	return sum / time.Duration(len(times))
+}
+
+type fight struct {
+	A *engineScore
+	B *engineScore
+}
+
+func evalChampionship() {
+	allFights := []fight{}
+	for _, eng := range engines.AllEngines {
+		for _, other := range engines.AllEngines {
+			f := play100x(eng, other)
+			allFights = append(allFights, f)
+		}
+	}
+	sort.Slice(allFights, func(i, j int) bool {
+		ires := math.Abs(allFights[i].A.score - allFights[i].B.score)
+		jres := math.Abs(allFights[j].A.score - allFights[j].B.score)
+		return ires < jres
+	})
+	fmt.Println("----------------FINAL-RESULT-----------------")
+	for _, fight := range allFights {
+		fmt.Printf("Result: %v %0.1f x %0.1f %v\n", fight.A.eng.String(), fight.A.score, fight.B.score, fight.B.eng.String())
+	}
 }

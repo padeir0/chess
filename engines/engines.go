@@ -20,22 +20,30 @@ var AllEngines = map[string]Engine{
 	"random":   Random,
 	"randcapt": RandCapt,
 
-	"minimax":        Minimax,
-	"minimax_mat":    Minimax_Mat,
-	"minimax_psqt":   Minimax_Psqt,
-	"minimaxII":      MinimaxII,
-	"minimaxII_mat":  MinimaxII_Mat,
-	"minimaxII_psqt": MinimaxII_Psqt,
+	"minimax":         Minimax,
+	"minimax_mat":     Minimax_Mat,
+	"minimax_psqt":    Minimax_Psqt,
+	"minimaxII":       MinimaxII,
+	"minimaxII_mat":   MinimaxII_Mat,
+	"minimaxII_psqt":  MinimaxII_Psqt,
+	"minimaxIII_mat":  MinimaxIII_Mat,
+	"minimaxIII_psqt": MinimaxIII_Psqt,
 
-	"negamax":   NegaMax,
-	"negamaxII": NegaMaxII,
+	"negamax":     NegaMax,
+	"negamax_mat": NegaMax_Mat,
+	"negamaxII":   NegaMaxII,
 
-	"alphabeta":        AlphaBeta,
-	"alphabeta_mat":    AlphaBeta_Mat,
-	"alphabeta_psqt":   AlphaBeta_Psqt,
-	"alphabetaII":      AlphaBetaII,
-	"alphabetaII_mat":  AlphaBetaII_Mat,
-	"alphabetaII_psqt": AlphaBetaII_Psqt,
+	"alphabeta":         AlphaBeta,
+	"alphabeta_mat":     AlphaBeta_Mat,
+	"alphabeta_psqt":    AlphaBeta_Psqt,
+	"alphabetaII":       AlphaBetaII,
+	"alphabetaII_mat":   AlphaBetaII_Mat,
+	"alphabetaII_psqt":  AlphaBetaII_Psqt,
+	"alphabetaIII":      AlphaBetaIII,
+	"alphabetaIII_psqt": AlphaBetaIII_Psqt,
+	"alphabetaIII_mat":  AlphaBetaIII_Mat,
+	"alphabetaIV_mat":   AlphaBetaIV_Mat,
+	"alphabetaIV_psqt":  AlphaBetaIV_Psqt,
 
 	"quiescence":        Quiescence,
 	"quiescence_mat":    Quiescence_Mat,
@@ -43,19 +51,21 @@ var AllEngines = map[string]Engine{
 	"quiescenceII":      QuiescenceII,
 	"quiescenceII_mat":  QuiescenceII_Mat,
 	"quiescenceII_psqt": QuiescenceII_Psqt,
+	"quiescenceIII":     QuiescenceIII,
+	"quiescenceIII_mat": QuiescenceIII_Mat,
 }
 
 var Random Engine = &BasicEngine{
 	Name:   "random",
 	Search: random.BestMove,
-	Eval:   func(*game.GameState) int { return 0 },
+	Eval:   func(*game.GameState, int) int { return 0 },
 	Depth:  0,
 }
 
 var RandCapt Engine = &BasicEngine{
 	Name:   "randcapt",
 	Search: randcapt.BestMove,
-	Eval:   func(*game.GameState) int { return 0 },
+	Eval:   func(*game.GameState, int) int { return 0 },
 	Depth:  0,
 }
 
@@ -108,10 +118,24 @@ var MinimaxIII_Mat Engine = &BasicEngine{
 	Depth:  4,
 }
 
+var MinimaxIII_Psqt Engine = &BasicEngine{
+	Name:   "minimaxIII_psqt",
+	Search: minimax.BestMove,
+	Eval:   psqt.Evaluate,
+	Depth:  4,
+}
+
 var NegaMax Engine = &BasicEngine{
 	Name:   "negamax",
 	Search: negamax.BestMove,
 	Eval:   custom.Evaluate,
+	Depth:  2,
+}
+
+var NegaMax_Mat Engine = &BasicEngine{
+	Name:   "negamax",
+	Search: negamax.BestMove,
+	Eval:   material.Evaluate,
 	Depth:  2,
 }
 
@@ -126,39 +150,74 @@ var AlphaBeta Engine = &BasicEngine{
 	Name:   "alphabeta",
 	Search: alphabeta.BestMove,
 	Eval:   custom.Evaluate,
-	Depth:  3,
+	Depth:  2,
 }
 
 var AlphaBeta_Mat Engine = &BasicEngine{
 	Name:   "alphabeta_mat",
 	Search: alphabeta.BestMove,
 	Eval:   material.Evaluate,
-	Depth:  3,
+	Depth:  2,
 }
 
 var AlphaBeta_Psqt Engine = &BasicEngine{
 	Name:   "alphabeta_psqt",
 	Search: alphabeta.BestMove,
 	Eval:   psqt.Evaluate,
-	Depth:  3,
+	Depth:  2,
 }
 
 var AlphaBetaII Engine = &BasicEngine{
 	Name:   "alphabetaII",
 	Search: alphabeta.BestMove,
 	Eval:   custom.Evaluate,
-	Depth:  5,
+	Depth:  3,
 }
 
 var AlphaBetaII_Mat Engine = &BasicEngine{
 	Name:   "alphabetaII_mat",
 	Search: alphabeta.BestMove,
 	Eval:   material.Evaluate,
-	Depth:  5,
+	Depth:  3,
 }
 
 var AlphaBetaII_Psqt Engine = &BasicEngine{
 	Name:   "alphabetaII_psqt",
+	Search: alphabeta.BestMove,
+	Eval:   psqt.Evaluate,
+	Depth:  3,
+}
+
+var AlphaBetaIII Engine = &BasicEngine{
+	Name:   "alphabetaIII",
+	Search: alphabeta.BestMove,
+	Eval:   custom.Evaluate,
+	Depth:  4,
+}
+
+var AlphaBetaIII_Mat Engine = &BasicEngine{
+	Name:   "alphabetaIII_mat",
+	Search: alphabeta.BestMove,
+	Eval:   material.Evaluate,
+	Depth:  4,
+}
+
+var AlphaBetaIII_Psqt Engine = &BasicEngine{
+	Name:   "alphabetaIII_psqt",
+	Search: alphabeta.BestMove,
+	Eval:   psqt.Evaluate,
+	Depth:  4,
+}
+
+var AlphaBetaIV_Mat Engine = &BasicEngine{
+	Name:   "alphabetaIV_mat",
+	Search: alphabeta.BestMove,
+	Eval:   material.Evaluate,
+	Depth:  5,
+}
+
+var AlphaBetaIV_Psqt Engine = &BasicEngine{
+	Name:   "alphabetaIV_psqt",
 	Search: alphabeta.BestMove,
 	Eval:   psqt.Evaluate,
 	Depth:  5,
@@ -169,23 +228,23 @@ var Quiescence Engine = &IntermediateEngine{
 	Search:   quiescence.BestMove,
 	Eval:     custom.Evaluate,
 	Depth:    2,
-	ExtDepth: 1,
+	ExtDepth: 10,
 }
 
 var Quiescence_Mat Engine = &IntermediateEngine{
-	Name:     "quiescence_Mat",
+	Name:     "quiescence_mat",
 	Search:   quiescence.BestMove,
 	Eval:     material.Evaluate,
 	Depth:    2,
-	ExtDepth: 1,
+	ExtDepth: 10,
 }
 
 var Quiescence_Psqt Engine = &IntermediateEngine{
-	Name:     "quiescence_Psqt",
+	Name:     "quiescence_psqt",
 	Search:   quiescence.BestMove,
 	Eval:     psqt.Evaluate,
 	Depth:    2,
-	ExtDepth: 1,
+	ExtDepth: 10,
 }
 
 var QuiescenceII Engine = &IntermediateEngine{
@@ -193,7 +252,7 @@ var QuiescenceII Engine = &IntermediateEngine{
 	Search:   quiescence.BestMove,
 	Eval:     custom.Evaluate,
 	Depth:    3,
-	ExtDepth: 1,
+	ExtDepth: 10,
 }
 
 var QuiescenceII_Mat Engine = &IntermediateEngine{
@@ -201,7 +260,7 @@ var QuiescenceII_Mat Engine = &IntermediateEngine{
 	Search:   quiescence.BestMove,
 	Eval:     material.Evaluate,
 	Depth:    3,
-	ExtDepth: 1,
+	ExtDepth: 10,
 }
 
 var QuiescenceII_Psqt Engine = &IntermediateEngine{
@@ -209,5 +268,21 @@ var QuiescenceII_Psqt Engine = &IntermediateEngine{
 	Search:   quiescence.BestMove,
 	Eval:     psqt.Evaluate,
 	Depth:    3,
-	ExtDepth: 1,
+	ExtDepth: 10,
+}
+
+var QuiescenceIII Engine = &IntermediateEngine{
+	Name:     "quiescenceIII",
+	Search:   quiescence.BestMove,
+	Eval:     custom.Evaluate,
+	Depth:    4,
+	ExtDepth: 10,
+}
+
+var QuiescenceIII_Mat Engine = &IntermediateEngine{
+	Name:     "quiescenceIII_mat",
+	Search:   quiescence.BestMove,
+	Eval:     material.Evaluate,
+	Depth:    4,
+	ExtDepth: 10,
 }

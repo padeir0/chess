@@ -55,4 +55,4 @@ func (this *IntermediateEngine) String() string {
 
 type BasicSearch func(g *game.GameState, eval Evaluator, depth int) *game.Move
 type ExtendedSearch func(g *game.GameState, eval Evaluator, extdepth, depth int) *game.Move
-type Evaluator func(*game.GameState) int
+type Evaluator func(g *game.GameState, depth int) int

@@ -237,51 +237,48 @@ func InitialGame(board *Board) *GameState {
 func NewMoveStack() *MoveStack {
 	return &MoveStack{
 		top:  0,
-		data: make([]*Move, 64),
+		data: make([]Move, 64),
 	}
 }
 
 type MoveStack struct {
 	top  int
-	data []*Move
+	data []Move
 }
 
-func (this *MoveStack) Push(mv *Move) {
+func (this *MoveStack) Push(mv Move) {
 	if this.data == nil {
-		this.data = make([]*Move, 64)
+		this.data = make([]Move, 64)
 	}
 	if this.top >= len(this.data) {
-		this.data = append(this.data, make([]*Move, 64)...)
+		this.data = append(this.data, make([]Move, 64)...)
 	}
 	this.data[this.top] = mv
 	this.top++
 }
 
-func (this *MoveStack) Pop() *Move {
+func (this *MoveStack) Pop() (Move, bool) {
 	if this.top <= 0 {
-		return nil
+		return Move{}, false
 	}
 	this.top--
-	return this.data[this.top]
+	return this.data[this.top], true
 }
 
-func (this *MoveStack) Top() *Move {
+func (this *MoveStack) Top() (Move, bool) {
 	if this.top <= 0 {
-		return nil
+		return Move{}, false
 	}
-	return this.data[this.top-1]
+	return this.data[this.top-1], false
 }
 
 func (this *MoveStack) Copy() *MoveStack {
 	a := &MoveStack{
 		top:  this.top,
-		data: make([]*Move, len(this.data)),
+		data: make([]Move, len(this.data)),
 	}
 	for i, mv := range this.data {
-		if mv != nil {
-			newmv := *mv
-			a.data[i] = &newmv
-		}
+		a.data[i] = mv
 	}
 	return a
 }
@@ -317,6 +314,22 @@ func MoveToHighlight(in []*Move) []Highlight {
 		out = append(out, hl)
 	}
 	return out
+}
+
+// for debugging
+func (this *GameState) CheckPieces() bool {
+	unique := map[Point]pc.Piece{}
+	for _, slot := range this.BlackPieces {
+		if slot.IsInvalid() {
+			continue
+		}
+		_, ok := unique[slot.Pos]
+		if ok {
+			return true
+		}
+		unique[slot.Pos] = slot.Piece
+	}
+	return false
 }
 
 func (this *GameState) Copy() *GameState {
@@ -367,18 +380,20 @@ func (this *GameState) Move(from, to Point) (bool, *Slot) {
 	if this.IsOver {
 		return false, nil
 	}
+	// so we can restore this counter on UnMoves
+	movesSinceLastCapt := this.MovesSinceLastCapture
 	if from == to { // passing turn (null move)
-		previous := this.Moves.Top()
-		if previous != nil && previous.IsPass() {
+		previous, ok := this.Moves.Top()
+		if ok && previous.IsPass() {
 			this.IsOver = true
 			this.Result = rs.Draw
 			this.Reason = "Both players passed turn"
 		}
 		null := *NullMove
 		this.MovesSinceLastCapture++
-		null.MovesSinceLastCapture = this.MovesSinceLastCapture
+		null.MovesSinceLastCapture = movesSinceLastCapt
 
-		this.Moves.Push(&null)
+		this.Moves.Push(null)
 		this.BlackTurn = !this.BlackTurn
 		return true, nil
 	}
@@ -411,7 +426,7 @@ func (this *GameState) Move(from, to Point) (bool, *Slot) {
 		if this.MovesSinceLastCapture == 50 {
 			this.IsOver = true
 			this.Result = rs.Draw
-			this.Reason = "30 move limit exceeded"
+			this.Reason = "50 move limit exceeded"
 		}
 	}
 
@@ -424,13 +439,13 @@ func (this *GameState) Move(from, to Point) (bool, *Slot) {
 
 	this.updatePieceTable(piece, capture, from, to)
 
-	this.Moves.Push(&Move{
+	this.Moves.Push(Move{
 		Piece:   oldpiece,
 		From:    from,
 		To:      to,
 		Capture: capture,
 
-		MovesSinceLastCapture: this.MovesSinceLastCapture,
+		MovesSinceLastCapture: movesSinceLastCapt,
 	})
 	this.BlackTurn = !this.BlackTurn
 	return true, capture
@@ -593,7 +608,10 @@ func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to
 }
 
 func (this *GameState) UnMove() {
-	mv := this.Moves.Pop()
+	mv, ok := this.Moves.Pop()
+	if !ok {
+		return
+	}
 	this.unmakeTableUpdate(mv.Piece, mv.Capture, mv.From, mv.To)
 	this.Board.Pop(mv.To)
 	if mv.Capture != nil {
@@ -912,11 +930,13 @@ type Move struct {
 func (this *Move) String() string {
 	if this.Capture != nil {
 		return this.Piece.String() +
-			" " + this.From.String() + this.To.String() +
-			" " + this.Capture.Piece.String()
+			this.From.String() + this.To.String() +
+			"x" + this.Capture.Piece.String() +
+			" " + strconv.Itoa(this.MovesSinceLastCapture)
 	}
-	return this.Piece.String() + " " +
-		this.From.String() + this.To.String()
+	return this.Piece.String() +
+		this.From.String() + this.To.String() +
+		" " + strconv.Itoa(this.MovesSinceLastCapture)
 }
 
 func (this *Move) IsPass() bool {
@@ -955,7 +975,7 @@ func orderByValue(a []Slot) {
 		if isl.Piece == pc.Empty || jsl.Piece == pc.Empty {
 			return false
 		}
-		if isl.Piece > jsl.Piece {
+		if isl.Piece < jsl.Piece {
 			return true
 		}
 		return false

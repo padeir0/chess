@@ -58,6 +58,27 @@ func (this *Node) NextMoves(isBlack bool) string {
 	return output
 }
 
+type pseudomove struct {
+	from, to game.Point
+}
+
+func (this *pseudomove) String() string {
+	return this.from.String() + this.to.String()
+}
+
+func (this *Node) HasDuplicates() bool {
+	uniques := map[pseudomove]struct{}{}
+	for _, leaf := range this.Leaves {
+		psmv := pseudomove{leaf.Move.From, leaf.Move.To}
+		_, ok := uniques[psmv]
+		if ok {
+			return true
+		}
+		uniques[psmv] = struct{}{}
+	}
+	return false
+}
+
 func (this *Node) Best(isBlackturn bool) (*game.Move, int) {
 	var output *game.Move
 	if isBlackturn {
