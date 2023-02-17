@@ -45,14 +45,15 @@ var AllEngines = map[string]Engine{
 	"alphabetaIV_mat":   AlphaBetaIV_Mat,
 	"alphabetaIV_psqt":  AlphaBetaIV_Psqt,
 
-	"quiescence":        Quiescence,
-	"quiescence_mat":    Quiescence_Mat,
-	"quiescence_psqt":   Quiescence_Psqt,
-	"quiescenceII":      QuiescenceII,
-	"quiescenceII_mat":  QuiescenceII_Mat,
-	"quiescenceII_psqt": QuiescenceII_Psqt,
-	"quiescenceIII":     QuiescenceIII,
-	"quiescenceIII_mat": QuiescenceIII_Mat,
+	"quiescence":         Quiescence,
+	"quiescence_mat":     Quiescence_Mat,
+	"quiescence_psqt":    Quiescence_Psqt,
+	"quiescenceII":       QuiescenceII,
+	"quiescenceII_mat":   QuiescenceII_Mat,
+	"quiescenceII_psqt":  QuiescenceII_Psqt,
+	"quiescenceIII":      QuiescenceIII,
+	"quiescenceIII_psqt": QuiescenceIII_Psqt,
+	"quiescenceIII_mat":  QuiescenceIII_Mat,
 }
 
 var Random Engine = &BasicEngine{
@@ -283,6 +284,14 @@ var QuiescenceIII_Mat Engine = &IntermediateEngine{
 	Name:     "quiescenceIII_mat",
 	Search:   quiescence.BestMove,
 	Eval:     material.Evaluate,
+	Depth:    4,
+	ExtDepth: 10,
+}
+
+var QuiescenceIII_Psqt Engine = &IntermediateEngine{
+	Name:     "quiescenceIII_psqt",
+	Search:   quiescence.BestMove,
+	Eval:     psqt.Evaluate,
 	Depth:    4,
 	ExtDepth: 10,
 }

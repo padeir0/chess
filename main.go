@@ -24,6 +24,8 @@ import (
 	"time"
 )
 
+type any = interface{}
+
 var asBlack = flag.Bool("black", false, "play as black")
 
 func main() {
@@ -198,12 +200,12 @@ func doSelfPlay(cli *cliState) {
 		if cli.Curr.BlackTurn {
 			fmt.Println("BLACK -------------")
 			start := time.Now()
-			engines.MinimaxII.Play(cli.Curr)
+			engines.QuiescenceIII.Play(cli.Curr)
 			fmt.Printf("BLACK: %v\n", time.Since(start))
 		} else {
 			fmt.Println("WHITE --------------")
 			start := time.Now()
-			engines.MinimaxII.Play(cli.Curr)
+			engines.QuiescenceIII.Play(cli.Curr)
 			fmt.Printf("WHITE: %v\n", time.Since(start))
 		}
 		fmt.Println(cli.Curr.Board.String())
@@ -226,7 +228,7 @@ func makeBoards(number int) []*game.Board {
 	return boards
 }
 
-func play100x(A, B ifaces.Engine) fight {
+func play100x(A, B ifaces.Engine, out chan fightResult) {
 	white := &engineScore{
 		eng:   A,
 		score: 0,
@@ -249,7 +251,8 @@ func play100x(A, B ifaces.Engine) fight {
 	white.times = nil
 	fmt.Printf("Comparison took: %v, Avg. %v: %v, Avg. %v: %v\n", time.Since(init), white.eng.String(), white.average, black.eng.String(), black.average)
 	fmt.Printf("Result: %v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
-	return fight{white, black}
+
+	out <- fightResult{white, black}
 }
 
 func playoneside(boards []*game.Board, white, black *engineScore) {
@@ -292,7 +295,8 @@ func evalCompare(cli *cliState, cmd *xcmd.Command) {
 		warn("engine not found: ", eng1Name)
 		return
 	}
-	play100x(eng0, eng1)
+	c := make(chan fightResult)
+	play100x(eng0, eng1, c)
 }
 
 func average(times []time.Duration) time.Duration {
@@ -303,18 +307,139 @@ func average(times []time.Duration) time.Duration {
 	return sum / time.Duration(len(times))
 }
 
-type fight struct {
+type fightResult struct {
 	A *engineScore
 	B *engineScore
 }
 
+type duel struct {
+	A ifaces.Engine
+	B ifaces.Engine
+}
+
+var fights = []duel{
+	{engines.Random, engines.RandCapt},
+
+	{engines.Random, engines.Minimax},
+	{engines.Random, engines.Minimax_Mat},
+	{engines.Random, engines.Minimax_Psqt},
+	{engines.Random, engines.MinimaxII},
+	{engines.Random, engines.MinimaxII_Mat},
+	{engines.Random, engines.MinimaxII_Psqt},
+
+	{engines.RandCapt, engines.Minimax},
+	{engines.RandCapt, engines.Minimax_Mat},
+	{engines.RandCapt, engines.Minimax_Psqt},
+	{engines.RandCapt, engines.MinimaxII},
+	{engines.RandCapt, engines.MinimaxII_Mat},
+	{engines.RandCapt, engines.MinimaxII_Psqt},
+
+	{engines.Minimax, engines.AlphaBeta},
+	{engines.Minimax_Mat, engines.AlphaBeta},
+	{engines.Minimax_Psqt, engines.AlphaBeta},
+	{engines.MinimaxII, engines.AlphaBeta},
+	{engines.MinimaxII_Mat, engines.AlphaBeta},
+	{engines.MinimaxII_Psqt, engines.AlphaBeta},
+
+	{engines.Minimax, engines.AlphaBeta_Mat},
+	{engines.Minimax_Mat, engines.AlphaBeta_Mat},
+	{engines.Minimax_Psqt, engines.AlphaBeta_Mat},
+	{engines.MinimaxII, engines.AlphaBeta_Mat},
+	{engines.MinimaxII_Mat, engines.AlphaBeta_Mat},
+	{engines.MinimaxII_Psqt, engines.AlphaBeta_Mat},
+
+	{engines.Minimax, engines.AlphaBeta_Psqt},
+	{engines.Minimax_Mat, engines.AlphaBeta_Psqt},
+	{engines.Minimax_Psqt, engines.AlphaBeta_Psqt},
+	{engines.MinimaxII, engines.AlphaBeta_Psqt},
+	{engines.MinimaxII_Mat, engines.AlphaBeta_Psqt},
+	{engines.MinimaxII_Psqt, engines.AlphaBeta_Psqt},
+
+	{engines.Minimax, engines.AlphaBetaIII},
+	{engines.Minimax_Mat, engines.AlphaBetaIII},
+	{engines.Minimax_Psqt, engines.AlphaBetaIII},
+	{engines.MinimaxII, engines.AlphaBetaIII},
+	{engines.MinimaxII_Mat, engines.AlphaBetaIII},
+	{engines.MinimaxII_Psqt, engines.AlphaBetaIII},
+
+	{engines.Minimax, engines.AlphaBetaIII_Mat},
+	{engines.Minimax_Mat, engines.AlphaBetaIII_Mat},
+	{engines.Minimax_Psqt, engines.AlphaBetaIII_Mat},
+	{engines.MinimaxII, engines.AlphaBetaIII_Mat},
+	{engines.MinimaxII_Mat, engines.AlphaBetaIII_Mat},
+	{engines.MinimaxII_Psqt, engines.AlphaBetaIII_Mat},
+
+	{engines.Minimax, engines.AlphaBetaIII_Psqt},
+	{engines.Minimax_Mat, engines.AlphaBetaIII_Psqt},
+	{engines.Minimax_Psqt, engines.AlphaBetaIII_Psqt},
+	{engines.MinimaxII, engines.AlphaBetaIII_Psqt},
+	{engines.MinimaxII_Mat, engines.AlphaBetaIII_Psqt},
+	{engines.MinimaxII_Psqt, engines.AlphaBetaIII_Psqt},
+
+	{engines.Quiescence, engines.AlphaBeta},
+	{engines.Quiescence_Mat, engines.AlphaBeta},
+	{engines.Quiescence_Psqt, engines.AlphaBeta},
+	{engines.QuiescenceIII, engines.AlphaBeta},
+	{engines.QuiescenceIII_Mat, engines.AlphaBeta},
+	{engines.QuiescenceIII_Psqt, engines.AlphaBeta},
+
+	{engines.Quiescence, engines.AlphaBeta_Mat},
+	{engines.Quiescence_Mat, engines.AlphaBeta_Mat},
+	{engines.Quiescence_Psqt, engines.AlphaBeta_Mat},
+	{engines.QuiescenceIII, engines.AlphaBeta_Mat},
+	{engines.QuiescenceIII_Mat, engines.AlphaBeta_Mat},
+	{engines.QuiescenceIII_Psqt, engines.AlphaBeta_Mat},
+
+	{engines.Quiescence, engines.AlphaBeta_Psqt},
+	{engines.Quiescence_Mat, engines.AlphaBeta_Psqt},
+	{engines.Quiescence_Psqt, engines.AlphaBeta_Psqt},
+	{engines.QuiescenceIII, engines.AlphaBeta_Psqt},
+	{engines.QuiescenceIII_Mat, engines.AlphaBeta_Psqt},
+	{engines.QuiescenceIII_Psqt, engines.AlphaBeta_Psqt},
+
+	{engines.Quiescence, engines.AlphaBetaIII},
+	{engines.Quiescence_Mat, engines.AlphaBetaIII},
+	{engines.Quiescence_Psqt, engines.AlphaBetaIII},
+	{engines.QuiescenceIII, engines.AlphaBetaIII},
+	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII},
+	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII},
+
+	{engines.Quiescence, engines.AlphaBetaIII_Mat},
+	{engines.Quiescence_Mat, engines.AlphaBetaIII_Mat},
+	{engines.Quiescence_Psqt, engines.AlphaBetaIII_Mat},
+	{engines.QuiescenceIII, engines.AlphaBetaIII_Mat},
+	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Mat},
+	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Mat},
+
+	{engines.Quiescence, engines.AlphaBetaIII_Psqt},
+	{engines.Quiescence_Mat, engines.AlphaBetaIII_Psqt},
+	{engines.Quiescence_Psqt, engines.AlphaBetaIII_Psqt},
+	{engines.QuiescenceIII, engines.AlphaBetaIII_Psqt},
+	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Psqt},
+	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Psqt},
+}
+
 func evalChampionship() {
-	allFights := []fight{}
-	for _, eng := range engines.AllEngines {
-		for _, other := range engines.AllEngines {
-			f := play100x(eng, other)
-			allFights = append(allFights, f)
+	allFights := []fightResult{}
+	out := make(chan fightResult)
+	towork := make([][]duel, 6)
+	for i := range fights {
+		windex := i % 6
+		if len(towork[windex]) == 0 {
+			towork[windex] = []duel{}
 		}
+		towork[windex] = append(towork[windex], fights[i])
+	}
+	for _, worklist := range towork {
+		a := worklist
+		go func() {
+			for _, duel := range a {
+				play100x(duel.A, duel.B, out)
+			}
+		}()
+	}
+	for i := 0; i < len(fights); i++ {
+		allFights = append(allFights, <-out)
 	}
 	sort.Slice(allFights, func(i, j int) bool {
 		ires := math.Abs(allFights[i].A.score - allFights[i].B.score)

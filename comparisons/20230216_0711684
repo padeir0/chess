@@ -1,0 +1,396 @@
+
+Comparison done concurrently, times may be off.
+
+The specifics on engine description are contained in chess/engines/engines.go,
+but can be summarized as:
+ - random: selects random moves
+ - randcapt: selects random moves, but prioritizes captures
+ - minimax, alphabeta, negamax, quiescence: the respective algorithms
+ - the roman numeral dictates the depth, minimax (no numeral) is depth 2,
+   minimaxII is minimax at depth 3, alphabetaIII is alphabeta at depth 4.
+ - quiescence is set to depth 2 up to 10, while quiescenceIII is set to depth
+   4 up to 10. (some positions may be analysed up to depth 14)
+ - the postfix defines the evaluation function used, _mat is material only,
+   _psqt is material + piece square tables and no postfix is a custom evaluation 
+   that takes into account mobility and other things, the code can be seen in
+   chess/evals/custom/custom.go
+
+The boards are not standard position, the 1st and 8th rank are shuffled,
+similar to Fischer's Random (Chess960), but without the rule on bishop
+pairs and castling rights.
+
+The score is calculated by playing 100 games on 50 shuffled boards, both
+contenders playing once as black and once as white. Draw is shown as 0.5 for each
+side, winning is a full point to the winning side.
+
+For each duel a new 50 board set is generated, running this a second time may
+yield slightly different results.
+
+
+The following is a list of comparisons including times, in the end there's
+a more compact result table with only scores.
+
+
+Comparison took: 63.012674ms, Avg. random: 21.369µs, Avg. randcapt: 19.427µs
+Result: random 2.0 x 98.0 randcapt
+
+Comparison took: 949.939625ms, Avg. random: 22.289µs, Avg. minimax_mat: 502.224µs
+Result: random 0.5 x 99.5 minimax_mat
+
+Comparison took: 1.114828141s, Avg. random: 20.789µs, Avg. minimax_psqt: 605.626µs
+Result: random 0.0 x 100.0 minimax_psqt
+
+Comparison took: 1.171881752s, Avg. randcapt: 21.478µs, Avg. minimax_mat: 360.043µs
+Result: randcapt 72.5 x 27.5 minimax_mat
+
+Comparison took: 1.593037688s, Avg. randcapt: 23.089µs, Avg. minimax_psqt: 489.882µs
+Result: randcapt 38.0 x 62.0 minimax_psqt
+
+Comparison took: 2.930205697s, Avg. random: 24.923µs, Avg. minimax: 1.614198ms
+Result: random 0.0 x 100.0 minimax
+
+Comparison took: 2.993263258s, Avg. minimax_mat: 461.31µs, Avg. alphabeta: 506.242µs
+Result: minimax_mat 1.0 x 99.0 alphabeta
+
+Comparison took: 3.171834829s, Avg. randcapt: 23.043µs, Avg. minimax: 1.106392ms
+Result: randcapt 39.0 x 61.0 minimax
+
+Comparison took: 2.067095356s, Avg. minimax_mat: 467.379µs, Avg. alphabeta_mat: 182.143µs
+Result: minimax_mat 6.0 x 94.0 alphabeta_mat
+
+Comparison took: 5.579695856s, Avg. minimax_psqt: 768.717µs, Avg. alphabeta: 566.304µs
+Result: minimax_psqt 7.5 x 92.5 alphabeta
+
+Comparison took: 2.013127333s, Avg. minimax_mat: 392.834µs, Avg. alphabeta_psqt: 259.664µs
+Result: minimax_mat 4.5 x 95.5 alphabeta_psqt
+
+Comparison took: 3.421065483s, Avg. minimax_psqt: 601.182µs, Avg. alphabeta_mat: 178.036µs
+Result: minimax_psqt 30.0 x 70.0 alphabeta_mat
+
+Comparison took: 3.566680493s, Avg. minimax_psqt: 605.483µs, Avg. alphabeta_psqt: 269.605µs
+Result: minimax_psqt 7.5 x 92.5 alphabeta_psqt
+
+Comparison took: 9.192845705s, Avg. minimax: 1.573048ms, Avg. alphabeta: 534.867µs
+Result: minimax 13.5 x 86.5 alphabeta
+
+Comparison took: 7.645815934s, Avg. minimax: 1.436445ms, Avg. alphabeta_mat: 192.203µs
+Result: minimax 34.5 x 65.5 alphabeta_mat
+
+Comparison took: 7.985336756s, Avg. minimax: 1.560732ms, Avg. alphabeta_psqt: 320.753µs
+Result: minimax 12.0 x 88.0 alphabeta_psqt
+
+Comparison took: 31.452043144s, Avg. random: 28.314µs, Avg. minimaxII_psqt: 19.361552ms
+Result: random 0.0 x 100.0 minimaxII_psqt
+
+Comparison took: 31.536280281s, Avg. random: 31.009µs, Avg. minimaxII_mat: 18.009598ms
+Result: random 1.0 x 99.0 minimaxII_mat
+
+Comparison took: 31.54984812s, Avg. randcapt: 29.422µs, Avg. minimaxII_mat: 11.105682ms
+Result: randcapt 78.5 x 21.5 minimaxII_mat
+
+Comparison took: 42.263339988s, Avg. randcapt: 30.797µs, Avg. minimaxII_psqt: 15.696677ms
+Result: randcapt 52.5 x 47.5 minimaxII_psqt
+
+Comparison took: 1m25.32203503s, Avg. minimax_mat: 516.22µs, Avg. alphabetaIII: 34.489436ms
+Result: minimax_mat 1.0 x 99.0 alphabetaIII
+
+Comparison took: 1m41.254783804s, Avg. random: 34.582µs, Avg. minimaxII: 62.008141ms
+Result: random 1.0 x 99.0 minimaxII
+
+Comparison took: 24.558442706s, Avg. minimax_mat: 463.227µs, Avg. alphabetaIII_mat: 9.684147ms
+Result: minimax_mat 3.0 x 97.0 alphabetaIII_mat
+
+Comparison took: 56.833392446s, Avg. minimaxII_mat: 18.22805ms, Avg. alphabeta: 514.646µs
+Result: minimaxII_mat 9.5 x 90.5 alphabeta
+
+Comparison took: 2m9.695576431s, Avg. minimax_psqt: 738.353µs, Avg. alphabetaIII: 35.196473ms
+Result: minimax_psqt 6.5 x 93.5 alphabetaIII
+
+Comparison took: 49.853042123s, Avg. minimax_mat: 508.614µs, Avg. alphabetaIII_psqt: 20.428533ms
+Result: minimax_mat 4.5 x 95.5 alphabetaIII_psqt
+
+Comparison took: 53.305646865s, Avg. minimaxII_mat: 15.622399ms, Avg. alphabeta_mat: 205.702µs
+Result: minimaxII_mat 10.5 x 89.5 alphabeta_mat
+
+Comparison took: 1m40.465023488s, Avg. minimaxII_psqt: 27.293283ms, Avg. alphabeta: 560.577µs
+Result: minimaxII_psqt 14.5 x 85.5 alphabeta
+
+Comparison took: 1m24.097798766s, Avg. randcapt: 33.302µs, Avg. minimaxII: 38.122063ms
+Result: randcapt 40.0 x 60.0 minimaxII
+
+Comparison took: 41.743330378s, Avg. minimax_psqt: 663.727µs, Avg. alphabetaIII_mat: 10.277588ms
+Result: minimax_psqt 17.0 x 83.0 alphabetaIII_mat
+
+Comparison took: 2m45.076310779s, Avg. minimax: 1.809339ms, Avg. alphabetaIII: 41.165738ms
+Result: minimax 10.0 x 90.0 alphabetaIII
+
+Comparison took: 55.647169917s, Avg. minimaxII_mat: 15.790779ms, Avg. alphabeta_psqt: 301.231µs
+Result: minimaxII_mat 7.5 x 92.5 alphabeta_psqt
+
+Comparison took: 59.590519305s, Avg. minimax: 1.6334ms, Avg. alphabetaIII_mat: 12.675991ms
+Result: minimax 16.5 x 83.5 alphabetaIII_mat
+
+Comparison took: 1m21.540199546s, Avg. minimaxII_psqt: 21.322198ms, Avg. alphabeta_mat: 206.239µs
+Result: minimaxII_psqt 14.5 x 85.5 alphabeta_mat
+
+Comparison took: 1m28.883358574s, Avg. quiescence_mat: 24.634411ms, Avg. alphabeta: 570.11µs
+Result: quiescence_mat 35.0 x 65.0 alphabeta
+
+Comparison took: 1m16.22810721s, Avg. minimax_psqt: 657.423µs, Avg. alphabetaIII_psqt: 19.71494ms
+Result: minimax_psqt 5.5 x 94.5 alphabetaIII_psqt
+
+Comparison took: 34.244987869s, Avg. quiescence_mat: 8.602464ms, Avg. alphabeta_mat: 208.09µs
+Result: quiescence_mat 73.5 x 26.5 alphabeta_mat
+
+Comparison took: 31.966168469s, Avg. quiescence_mat: 9.068117ms, Avg. alphabeta_psqt: 299.125µs
+Result: quiescence_mat 45.5 x 54.5 alphabeta_psqt
+
+Comparison took: 1m26.884136686s, Avg. minimaxII_psqt: 22.480987ms, Avg. alphabeta_psqt: 301.19µs
+Result: minimaxII_psqt 12.0 x 88.0 alphabeta_psqt
+
+Comparison took: 1m28.234394734s, Avg. minimax: 1.591013ms, Avg. alphabetaIII_psqt: 22.880149ms
+Result: minimax 9.5 x 90.5 alphabetaIII_psqt
+
+Comparison took: 2m5.154189249s, Avg. minimaxII_mat: 18.49597ms, Avg. alphabetaIII: 39.319787ms
+Result: minimaxII_mat 2.5 x 97.5 alphabetaIII
+
+Comparison took: 1m47.433918755s, Avg. quiescence_psqt: 27.637719ms, Avg. alphabeta: 494.108µs
+Result: quiescence_psqt 60.0 x 40.0 alphabeta
+
+Comparison took: 52.156128893s, Avg. minimaxII_mat: 13.510398ms, Avg. alphabetaIII_mat: 9.332932ms
+Result: minimaxII_mat 2.0 x 98.0 alphabetaIII_mat
+
+Comparison took: 39.889339347s, Avg. quiescence_psqt: 12.375498ms, Avg. alphabeta_mat: 192.302µs
+Result: quiescence_psqt 72.5 x 27.5 alphabeta_mat
+
+Comparison took: 4m3.305663492s, Avg. minimaxII: 60.288602ms, Avg. alphabeta: 592.1µs
+Result: minimaxII 15.0 x 85.0 alphabeta
+
+Comparison took: 2m0.945494949s, Avg. quiescence_mat: 11.770018ms, Avg. alphabetaIII: 31.361604ms
+Result: quiescence_mat 16.5 x 83.5 alphabetaIII
+
+Comparison took: 1m10.536756053s, Avg. quiescence_psqt: 19.701974ms, Avg. alphabeta_psqt: 291.541µs
+Result: quiescence_psqt 62.5 x 37.5 alphabeta_psqt
+
+Comparison took: 1m15.816110863s, Avg. minimaxII_mat: 14.768567ms, Avg. alphabetaIII_psqt: 19.903504ms
+Result: minimaxII_mat 2.0 x 98.0 alphabetaIII_psqt
+
+Comparison took: 45.020245291s, Avg. quiescence_mat: 5.248678ms, Avg. alphabetaIII_mat: 8.566582ms
+Result: quiescence_mat 30.0 x 70.0 alphabetaIII_mat
+
+Comparison took: 2m41.638990048s, Avg. quiescence: 44.935863ms, Avg. alphabeta: 506.656µs
+Result: quiescence 57.5 x 42.5 alphabeta
+
+Comparison took: 2m53.968546882s, Avg. minimaxII_psqt: 22.176122ms, Avg. alphabetaIII: 34.332419ms
+Result: minimaxII_psqt 3.5 x 96.5 alphabetaIII
+
+Comparison took: 1m24.518538162s, Avg. quiescence_mat: 8.89159ms, Avg. alphabetaIII_psqt: 18.913951ms
+Result: quiescence_mat 14.0 x 86.0 alphabetaIII_psqt
+
+Comparison took: 1m14.615202654s, Avg. quiescence: 22.597978ms, Avg. alphabeta_mat: 192.161µs
+Result: quiescence 68.5 x 31.5 alphabeta_mat
+
+Comparison took: 1m36.66605631s, Avg. minimaxII_psqt: 19.533819ms, Avg. alphabetaIII_mat: 10.399474ms
+Result: minimaxII_psqt 10.0 x 90.0 alphabetaIII_mat
+
+Comparison took: 3m7.741762612s, Avg. minimaxII: 51.504684ms, Avg. alphabeta_mat: 211.674µs
+Result: minimaxII 19.0 x 81.0 alphabeta_mat
+
+Comparison took: 2m55.826168877s, Avg. quiescence_psqt: 24.523683ms, Avg. alphabetaIII: 28.030531ms
+Result: quiescence_psqt 34.0 x 66.0 alphabetaIII
+
+Comparison took: 1m41.3119804s, Avg. quiescence: 27.601971ms, Avg. alphabeta_psqt: 285.639µs
+Result: quiescence 73.0 x 27.0 alphabeta_psqt
+
+Comparison took: 1m8.205210084s, Avg. quiescence_psqt: 12.661402ms, Avg. alphabetaIII_mat: 8.271919ms
+Result: quiescence_psqt 49.0 x 51.0 alphabetaIII_mat
+
+Comparison took: 1m52.927042402s, Avg. minimaxII_psqt: 20.197496ms, Avg. alphabetaIII_psqt: 18.116772ms
+Result: minimaxII_psqt 6.5 x 93.5 alphabetaIII_psqt
+
+Comparison took: 3m26.283332657s, Avg. minimaxII: 50.941248ms, Avg. alphabeta_psqt: 305.208µs
+Result: minimaxII 14.0 x 86.0 alphabeta_psqt
+
+Comparison took: 1m38.862464923s, Avg. quiescence_psqt: 13.766554ms, Avg. alphabetaIII_psqt: 15.461204ms
+Result: quiescence_psqt 38.0 x 62.0 alphabetaIII_psqt
+
+Comparison took: 2m53.500949067s, Avg. quiescence: 25.932417ms, Avg. alphabetaIII: 26.862903ms
+Result: quiescence 27.5 x 72.5 alphabetaIII
+
+Comparison took: 1m57.527073629s, Avg. quiescence: 27.864921ms, Avg. alphabetaIII_mat: 7.897399ms
+Result: quiescence 48.0 x 52.0 alphabetaIII_mat
+
+Comparison took: 2m34.470296865s, Avg. quiescence: 33.335405ms, Avg. alphabetaIII_psqt: 15.467248ms
+Result: quiescence 36.5 x 63.5 alphabetaIII_psqt
+
+Comparison took: 5m11.853857611s, Avg. minimaxII: 56.221862ms, Avg. alphabetaIII: 39.2146ms
+Result: minimaxII 14.0 x 86.0 alphabetaIII
+
+Comparison took: 2m40.478162922s, Avg. minimaxII: 42.730827ms, Avg. alphabetaIII_mat: 9.202662ms
+Result: minimaxII 6.0 x 94.0 alphabetaIII_mat
+
+Comparison took: 3m11.505002408s, Avg. minimaxII: 46.761624ms, Avg. alphabetaIII_psqt: 18.189996ms
+Result: minimaxII 12.5 x 87.5 alphabetaIII_psqt
+
+Comparison took: 38m52.679826517s, Avg. quiescenceIII_mat: 626.862783ms, Avg. alphabeta: 536.568µs
+Result: quiescenceIII_mat 41.0 x 59.0 alphabeta
+
+Comparison took: 17m39.455842299s, Avg. quiescenceIII_mat: 277.31054ms, Avg. alphabeta_mat: 179.338µs
+Result: quiescenceIII_mat 70.0 x 30.0 alphabeta_mat
+
+Comparison took: 15m27.467634346s, Avg. quiescenceIII_mat: 263.59673ms, Avg. alphabeta_psqt: 262.112µs
+Result: quiescenceIII_mat 52.0 x 48.0 alphabeta_psqt
+
+Comparison took: 1h12m17.080027033s, Avg. quiescenceIII_psqt: 1.178085685s, Avg. alphabeta: 470.041µs
+Result: quiescenceIII_psqt 68.5 x 31.5 alphabeta
+
+Comparison took: 21m11.988462694s, Avg. quiescenceIII_mat: 392.708928ms, Avg. alphabetaIII: 28.964885ms
+Result: quiescenceIII_mat 28.0 x 72.0 alphabetaIII
+
+Comparison took: 10m46.090779502s, Avg. quiescenceIII_mat: 172.787432ms, Avg. alphabetaIII_mat: 7.618125ms
+Result: quiescenceIII_mat 45.0 x 55.0 alphabetaIII_mat
+
+Comparison took: 28m40.190128186s, Avg. quiescenceIII_psqt: 599.825838ms, Avg. alphabeta_mat: 171.395µs
+Result: quiescenceIII_psqt 85.0 x 15.0 alphabeta_mat
+
+Comparison took: 12m31.192215604s, Avg. quiescenceIII_mat: 235.49637ms, Avg. alphabetaIII_psqt: 16.878891ms
+Result: quiescenceIII_mat 30.5 x 69.5 alphabetaIII_psqt
+
+Comparison took: 2h5m45.786470905s, Avg. quiescenceIII: 2.098517464s, Avg. alphabeta: 450.993µs
+Result: quiescenceIII 70.0 x 30.0 alphabeta
+
+Comparison took: 42m45.825011137s, Avg. quiescenceIII_psqt: 686.731522ms, Avg. alphabeta_psqt: 236.68µs
+Result: quiescenceIII_psqt 72.5 x 27.5 alphabeta_psqt
+
+Comparison took: 39m6.085283581s, Avg. quiescenceIII: 840.128705ms, Avg. alphabeta_mat: 160.263µs
+Result: quiescenceIII 82.5 x 17.5 alphabeta_mat
+
+Comparison took: 46m8.559412906s, Avg. quiescenceIII_psqt: 749.192454ms, Avg. alphabetaIII: 23.655563ms
+Result: quiescenceIII_psqt 42.5 x 57.5 alphabetaIII
+
+Comparison took: 29m37.404317667s, Avg. quiescenceIII_psqt: 495.714652ms, Avg. alphabetaIII_mat: 6.537695ms
+Result: quiescenceIII_psqt 61.0 x 39.0 alphabetaIII_mat
+
+Comparison took: 44m49.840715778s, Avg. quiescenceIII: 803.207949ms, Avg. alphabeta_psqt: 210.335µs
+Result: quiescenceIII 87.0 x 13.0 alphabeta_psqt
+
+Comparison took: 27m16.032655431s, Avg. quiescenceIII_psqt: 468.650898ms, Avg. alphabetaIII_psqt: 12.5413ms
+Result: quiescenceIII_psqt 52.0 x 48.0 alphabetaIII_psqt
+
+Comparison took: 1h26m39.18033397s, Avg. quiescenceIII: 1.501441014s, Avg. alphabetaIII: 21.457586ms
+Result: quiescenceIII 49.0 x 51.0 alphabetaIII
+
+Comparison took: 47m59.318799664s, Avg. quiescenceIII: 915.946866ms, Avg. alphabetaIII_mat: 6.337591ms
+Result: quiescenceIII 58.5 x 41.5 alphabetaIII_mat
+
+Comparison took: 45m51.776076758s, Avg. quiescenceIII: 814.907895ms, Avg. alphabetaIII_psqt: 11.673755ms
+Result: quiescenceIII 43.0 x 57.0 alphabetaIII_psqt
+
+
+Final Results:
+
+quiescenceIII       49.0 x 51.0    alphabetaIII
+quiescence_psqt     49.0 x 51.0    alphabetaIII_mat
+quiescenceIII_psqt  52.0 x 48.0    alphabetaIII_psqt
+quiescence          48.0 x 52.0    alphabetaIII_mat
+quiescenceIII_mat   52.0 x 48.0    alphabeta_psqt
+randcapt            52.5 x 47.5    minimaxII_psqt
+quiescence_mat      45.5 x 54.5    alphabeta_psqt
+quiescenceIII_mat   45.0 x 55.0    alphabetaIII_mat
+quiescenceIII       43.0 x 57.0    alphabetaIII_psqt
+quiescenceIII_psqt  42.5 x 57.5    alphabetaIII
+quiescence          57.5 x 42.5    alphabeta
+quiescenceIII       58.5 x 41.5    alphabetaIII_mat
+quiescenceIII_mat   41.0 x 59.0    alphabeta
+quiescence_psqt     60.0 x 40.0    alphabeta
+randcapt            40.0 x 60.0    minimaxII
+randcapt            39.0 x 61.0    minimax
+quiescenceIII_psqt  61.0 x 39.0    alphabetaIII_mat
+randcapt            38.0 x 62.0    minimax_psqt
+quiescence_psqt     38.0 x 62.0    alphabetaIII_psqt
+quiescence_psqt     62.5 x 37.5    alphabeta_psqt
+quiescence          36.5 x 63.5    alphabetaIII_psqt
+quiescence_mat      35.0 x 65.0    alphabeta
+minimax             34.5 x 65.5    alphabeta_mat
+quiescence_psqt     34.0 x 66.0    alphabetaIII
+quiescenceIII_psqt  68.5 x 31.5    alphabeta
+quiescence          68.5 x 31.5    alphabeta_mat
+quiescenceIII_mat   30.5 x 69.5    alphabetaIII_psqt
+quiescenceIII_mat   70.0 x 30.0    alphabeta_mat
+quiescence_mat      30.0 x 70.0    alphabetaIII_mat
+quiescenceIII       70.0 x 30.0    alphabeta
+minimax_psqt        30.0 x 70.0    alphabeta_mat
+quiescenceIII_mat   28.0 x 72.0    alphabetaIII
+quiescence_psqt     72.5 x 27.5    alphabeta_mat
+randcapt            72.5 x 27.5    minimax_mat
+quiescenceIII_psqt  72.5 x 27.5    alphabeta_psqt
+quiescence          27.5 x 72.5    alphabetaIII
+quiescence          73.0 x 27.0    alphabeta_psqt
+quiescence_mat      73.5 x 26.5    alphabeta_mat
+randcapt            78.5 x 21.5    minimaxII_mat
+minimaxII           19.0 x 81.0    alphabeta_mat
+quiescenceIII       82.5 x 17.5    alphabeta_mat
+minimax_psqt        17.0 x 83.0    alphabetaIII_mat
+quiescence_mat      16.5 x 83.5    alphabetaIII
+minimax             16.5 x 83.5    alphabetaIII_mat
+quiescenceIII_psqt  85.0 x 15.0    alphabeta_mat
+minimaxII           15.0 x 85.0    alphabeta
+minimaxII_psqt      14.5 x 85.5    alphabeta_mat
+minimaxII_psqt      14.5 x 85.5    alphabeta
+minimaxII           14.0 x 86.0    alphabetaIII
+minimaxII           14.0 x 86.0    alphabeta_psqt
+quiescence_mat      14.0 x 86.0    alphabetaIII_psqt
+minimax             13.5 x 86.5    alphabeta
+quiescenceIII       87.0 x 13.0    alphabeta_psqt
+minimaxII           12.5 x 87.5    alphabetaIII_psqt
+minimax             12.0 x 88.0    alphabeta_psqt
+minimaxII_psqt      12.0 x 88.0    alphabeta_psqt
+minimaxII_mat       10.5 x 89.5    alphabeta_mat
+minimaxII_psqt      10.0 x 90.0    alphabetaIII_mat
+minimax             10.0 x 90.0    alphabetaIII
+minimaxII_mat        9.5 x 90.5    alphabeta
+minimax              9.5 x 90.5    alphabetaIII_psqt
+minimaxII_mat        7.5 x 92.5    alphabeta_psqt
+minimax_psqt         7.5 x 92.5    alphabeta_psqt
+minimax_psqt         7.5 x 92.5    alphabeta
+minimaxII_psqt       6.5 x 93.5    alphabetaIII_psqt
+minimax_psqt         6.5 x 93.5    alphabetaIII
+minimax_mat          6.0 x 94.0    alphabeta_mat
+minimaxII            6.0 x 94.0    alphabetaIII_mat
+minimax_psqt         5.5 x 94.5    alphabetaIII_psqt
+minimax_mat          4.5 x 95.5    alphabetaIII_psqt
+minimax_mat          4.5 x 95.5    alphabeta_psqt
+minimaxII_psqt       3.5 x 96.5    alphabetaIII
+minimax_mat          3.0 x 97.0    alphabetaIII_mat
+minimaxII_mat        2.5 x 97.5    alphabetaIII
+minimaxII_mat        2.0 x 98.0    alphabetaIII_mat
+random               2.0 x 98.0    randcapt
+minimaxII_mat        2.0 x 98.0    alphabetaIII_psqt
+random               1.0 x 99.0    minimaxII_mat
+minimax_mat          1.0 x 99.0    alphabetaIII
+random               1.0 x 99.0    minimaxII
+minimax_mat          1.0 x 99.0    alphabeta
+random               0.5 x 99.5    minimax_mat
+random               0.0 x 100.0   minimaxII_psqt
+random               0.0 x 100.0   minimax
+random               0.0 x 100.0   minimax_psqt
+
+
+The strongest search algorithm so far seems to be just plain AlphaBeta Search,
+but it may just be because the evals are doing worse at deeper depths,
+making Quiescence search perform worse.
+
+Interesting to see how a bad eval can lead to worse performance, see in the 
+case of randcapt vs minimax_mat, even though the search is going deeper,
+because the material only evaluation doesn't distinguish enough between
+equally material positions, the search is forced to take one random position,
+which is probably worse because it may delay a capture.
+
+Example:
+	The search finds you're up a pawn in two positions at depth 2, but now it must
+	choose between both, it has no information to tell if you made the capture
+	in the first or second move, so it just takes one of the two, if it ends
+	with the capture at second move, now the opponend may evade or even counter-capture.
+
+Conclusion:
+	Evals need tuning
