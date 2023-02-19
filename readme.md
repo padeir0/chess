@@ -38,6 +38,4 @@ stopprofile
 quit         // quits
 exit         // quits
 clear        // clears screen
-
-NO // makes the engine cry
 ```

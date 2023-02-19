@@ -8,7 +8,6 @@ import (
 
 	"chess/engines"
 
-	gentest "chess/movegen"
 	seggen "chess/movegen/segregated"
 
 	rs "chess/game/result"
@@ -23,8 +22,6 @@ import (
 	"sort"
 	"time"
 )
-
-type any = interface{}
 
 var asBlack = flag.Bool("black", false, "play as black")
 
@@ -60,7 +57,7 @@ type cliState struct {
 func newCliState() *cliState {
 	return &cliState{
 		Saved:           map[string]game.GameState{},
-		Curr:            game.InitialGame(game.ShuffledBoard()),
+		Curr:            game.InitialGame(game.InitialBoard()),
 		ComputerIsBlack: !*asBlack,
 	}
 }
@@ -92,10 +89,7 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 		cli.Saved[txt] = *cli.Curr
 	case ck.Restore:
 		if len(cmd.Operands) == 0 {
-			cli.Curr = game.InitialGame(game.ShuffledBoard())
-			if !gentest.CompareGens(cli.Curr, 5) {
-				fmt.Println("movement generators don't match")
-			}
+			cli.Curr = game.InitialGame(game.InitialBoard())
 			return
 		}
 		txt := *cmd.Operands[0].Label
@@ -177,7 +171,7 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 }
 
 func enginePlay(cli *cliState) {
-	engines.QuiescenceIII.Play(cli.Curr)
+	engines.QuiescenceII.Play(cli.Curr)
 }
 
 func isOver(cli *cliState) bool {
@@ -226,6 +220,62 @@ func makeBoards(number int) []*game.Board {
 		boards[i] = game.ShuffledBoard()
 	}
 	return boards
+}
+
+func play20x(A, B ifaces.Engine) fightResult {
+	white := &engineScore{
+		eng:   A,
+		score: 0,
+		times: []time.Duration{},
+	}
+	black := &engineScore{
+		eng:   B,
+		score: 0,
+		times: []time.Duration{},
+	}
+	init := time.Now()
+	var numOfBoards = 10
+	boards := makeBoards(numOfBoards)
+	playprint(boards, white, black)
+	playprint(boards, black, white)
+
+	black.average = average(black.times)
+	black.times = nil
+	white.average = average(white.times)
+	white.times = nil
+	fmt.Printf("Comparison took: %v, Avg. %v: %v, Avg. %v: %v\n", time.Since(init), white.eng.String(), white.average, black.eng.String(), black.average)
+	fmt.Printf("Result: %v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
+
+	return fightResult{white, black}
+}
+
+func playprint(boards []*game.Board, white, black *engineScore) {
+	for i := 0; i < len(boards); i++ {
+		g := game.InitialGame(boards[i])
+		for !g.IsOver {
+			if g.BlackTurn {
+				start := time.Now()
+				black.eng.Play(g)
+				black.times = append(black.times, time.Since(start))
+			} else {
+				start := time.Now()
+				white.eng.Play(g)
+				white.times = append(white.times, time.Since(start))
+			}
+		}
+		switch g.Result {
+		case rs.Draw:
+			white.score += 0.5
+			black.score += 0.5
+			fmt.Println(g.Board.String())
+			fmt.Println(g.Moves)
+		case rs.WhiteWins:
+			white.score += 1
+		case rs.BlackWins:
+			black.score += 1
+		}
+		fmt.Printf("Result: %v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
+	}
 }
 
 func play100x(A, B ifaces.Engine, out chan fightResult) {
@@ -295,8 +345,8 @@ func evalCompare(cli *cliState, cmd *xcmd.Command) {
 		warn("engine not found: ", eng1Name)
 		return
 	}
-	c := make(chan fightResult)
-	play100x(eng0, eng1, c)
+	res := play20x(eng0, eng1)
+	fmt.Println(res)
 }
 
 func average(times []time.Duration) time.Duration {

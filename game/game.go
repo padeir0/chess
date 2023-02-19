@@ -283,6 +283,18 @@ func (this *MoveStack) Copy() *MoveStack {
 	return a
 }
 
+func (this *MoveStack) String() string {
+	output := ""
+	for i, move := range this.data[:this.top] {
+		if i%2 == 0 {
+			output += strconv.Itoa(i+1) + ". " + move.String()
+		} else {
+			output += " " + move.String() + ", "
+		}
+	}
+	return output
+}
+
 type GameState struct {
 	BlackTurn bool
 	Board     Board
@@ -628,9 +640,10 @@ func (this *GameState) UnMove() {
 }
 
 /*
-  P
- ###
+ P
+###
 */
+//
 func isValidBlackPawnMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check shape of movement
 	if to.Row-from.Row != 1 ||
@@ -641,9 +654,10 @@ func isValidBlackPawnMove(g *GameState, from, to Point) (bool, *Slot) {
 }
 
 /*
- ###
-  P
+###
+ P
 */
+//
 func isValidWhitePawnMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check shape of movement
 	if to.Row-from.Row != -1 ||
@@ -762,9 +776,9 @@ func isValidKingMove(g *GameState, from, to Point) (bool, *Slot) {
 }
 
 /*
- ### (-1, -1) (-1, 0) (-1, 1)
- #K# (0,  -1)         (0,  1)
- ### (1,  -1) (1,  0) (1,  1)
+### (-1, -1) (-1, 0) (-1, 1)
+#K# (0,  -1)         (0,  1)
+### (1,  -1) (1,  0) (1,  1)
 */
 func isValidMovedKingMove(g *GameState, from, to Point) (bool, *Slot) {
 	ColDiff := from.Column - to.Column
@@ -798,6 +812,7 @@ func isValidMovedKingMove(g *GameState, from, to Point) (bool, *Slot) {
 #   #  (r+1, c-2)     (r+1, c+2)
  # #     (r+2, c-1) (r+2, c+1)
 */
+//if you remove this comment, gofmt will destroy the formatting
 func isValidHorsieMove(g *GameState, from, to Point) (bool, *Slot) {
 	// check if shape is horsie-like
 	if !((Abs(int32(from.Column-to.Column)) == 2 &&
@@ -826,11 +841,12 @@ func isValidHorsieMove(g *GameState, from, to Point) (bool, *Slot) {
 
 /*
 diagonals only (bishop-like)
- #   #  (0, 1)        (0, 5)
-  # #      (1, 2) (1, 4)
-   B          (2, 3)
-  # #      (3, 2) (3, 4)
- #   #  (4, 1)        (4, 5)
+
+	#   #  (0, 1)        (0, 5)
+	 # #      (1, 2) (1, 4)
+	  B          (2, 3)
+	 # #      (3, 2) (3, 4)
+	#   #  (4, 1)        (4, 5)
 */
 func bishop_ClosestPieceInWay(g *GameState, from, to Point) *Point {
 	rowQuant := 1
@@ -931,12 +947,10 @@ func (this *Move) String() string {
 	if this.Capture != nil {
 		return this.Piece.String() +
 			this.From.String() + this.To.String() +
-			"x" + this.Capture.Piece.String() +
-			" " + strconv.Itoa(this.MovesSinceLastCapture)
+			"x" + this.Capture.Piece.String()
 	}
 	return this.Piece.String() +
-		this.From.String() + this.To.String() +
-		" " + strconv.Itoa(this.MovesSinceLastCapture)
+		this.From.String() + this.To.String()
 }
 
 func (this *Move) IsPass() bool {

@@ -18,9 +18,12 @@ func BestMove(g *game.GameState, eval ifaces.Evaluator, qdepth, depth int) *game
 		Move:  game.NullMove,
 		Score: 314159,
 	}
-	newG := g.Copy()
-	bestMove := alphabeta(newG, n, MinusInf, PlusInf, qdepth, depth, eval)
+	bestMove := alphabeta(g, n, MinusInf, PlusInf, qdepth, depth, eval)
+
 	//fmt.Println("nodes: ", nodes, "qnodes: ", qnodes)
+	//fmt.Println(n.NextMoves(g.BlackTurn))
+	//fmt.Println("Best Move: ", bestMove.Move)
+	//fmt.Println("Best Score: ", bestMove.Score)
 
 	return bestMove.Move
 }
@@ -53,6 +56,7 @@ func maximizingPlayer(g *game.GameState, n *Node, alpha, beta, qdepth, depth int
 	for mv != nil {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, qdepth, depth-1, eval)
+		n.AddLeaf(leaf)
 		g.UnMove()
 
 		if leaf.Score >= beta {
@@ -79,6 +83,7 @@ func minimizingPlayer(g *game.GameState, n *Node, alpha, beta, qdepth, depth int
 	for mv != nil {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, qdepth, depth-1, eval)
+		n.AddLeaf(leaf)
 		g.UnMove()
 
 		if leaf.Score <= alpha {
