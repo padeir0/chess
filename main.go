@@ -253,18 +253,18 @@ type duel struct {
 }
 
 var duels = []duel{
-	{engines.Random, engines.RandCapt},
-	{engines.Minimax, engines.Random},
-	{engines.Minimax, engines.Minimax_Mat},
-	{engines.Minimax, engines.Minimax_Psqt},
-	{engines.Minimax, engines.RandCapt},
-	{engines.Minimax, engines.MinimaxII},
+	//{engines.Random, engines.RandCapt},
+	//{engines.Minimax, engines.Random},
+	//{engines.Minimax, engines.Minimax_Mat},
+	//{engines.Minimax, engines.Minimax_Psqt},
+	//{engines.Minimax, engines.RandCapt},
+	//{engines.Minimax, engines.MinimaxII},
 
-	{engines.AlphaBeta, engines.RandCapt},
-	{engines.AlphaBeta, engines.AlphaBeta_Mat},
-	{engines.AlphaBeta, engines.AlphaBeta_Psqt},
-	{engines.AlphaBetaII, engines.AlphaBeta},
-	{engines.AlphaBetaIII, engines.AlphaBetaII},
+	//{engines.AlphaBeta, engines.RandCapt},
+	//{engines.AlphaBeta, engines.AlphaBeta_Mat},
+	//{engines.AlphaBeta, engines.AlphaBeta_Psqt},
+	//{engines.AlphaBetaII, engines.AlphaBeta},
+	//{engines.AlphaBetaIII, engines.AlphaBetaII},
 
 	{engines.Quiescence, engines.AlphaBeta},
 	{engines.Quiescence, engines.AlphaBeta_Mat},
@@ -279,6 +279,7 @@ func evalChampionship() {
 	for _, duel := range duels {
 		res := comps.Compare(duel.A, duel.B, 200)
 		allFights = append(allFights, res)
+		fmt.Println(res)
 	}
 	sort.Slice(allFights, func(i, j int) bool {
 		ires := math.Abs(allFights[i].White.Score - allFights[i].Black.Score)

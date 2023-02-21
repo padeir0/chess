@@ -1018,6 +1018,6 @@ func OrderSlots(a []Slot) {
 				return false
 			}
 		}
-		return true // should never happen, but ok
+		return true
 	})
 }
