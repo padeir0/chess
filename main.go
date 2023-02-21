@@ -267,19 +267,25 @@ var duels = []duel{
 	//{engines.AlphaBetaIII, engines.AlphaBetaII},
 
 	{engines.Quiescence, engines.AlphaBeta},
-	{engines.Quiescence, engines.AlphaBeta_Mat},
-	{engines.Quiescence, engines.AlphaBeta_Psqt},
-	{engines.QuiescenceIII, engines.AlphaBetaIII},
-	{engines.QuiescenceIII, engines.AlphaBetaIII_Mat},
-	{engines.QuiescenceIII, engines.AlphaBetaIII_Psqt},
+	{engines.Quiescence_Mat, engines.AlphaBeta_Mat},
+	{engines.Quiescence_Psqt, engines.AlphaBeta_Psqt},
+
+	{engines.QuiescenceII, engines.AlphaBetaII},
+	{engines.QuiescenceII_Mat, engines.AlphaBetaII_Mat},
+	{engines.QuiescenceII_Psqt, engines.AlphaBetaII_Psqt},
+
+	//{engines.QuiescenceIII, engines.AlphaBetaIII},
+	//{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Mat},
+	//{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Psqt},
 }
 
 func evalChampionship() {
 	allFights := []comps.FightResult{}
 	for _, duel := range duels {
+		start := time.Now()
 		res := comps.Compare(duel.A, duel.B, 200)
 		allFights = append(allFights, res)
-		fmt.Println(res)
+		fmt.Println(res, " : ", time.Since(start))
 	}
 	sort.Slice(allFights, func(i, j int) bool {
 		ires := math.Abs(allFights[i].White.Score - allFights[i].Black.Score)

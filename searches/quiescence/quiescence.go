@@ -121,6 +121,10 @@ func quiescence(g *game.GameState, n *Node, alpha, beta, depth, qdepth int, eval
 
 func quiesc_minimize(g *game.GameState, n *Node, alpha, beta, depth, qdepth int, eval ifaces.Evaluator) *Node {
 	standPat := eval(g, depth+qdepth)
+	if standPat <= alpha {
+		n.Score = alpha
+		return n
+	}
 	n.Score = standPat
 	if standPat < beta {
 		beta = standPat
@@ -154,11 +158,14 @@ func quiesc_minimize(g *game.GameState, n *Node, alpha, beta, depth, qdepth int,
 
 func quiesc_maximize(g *game.GameState, n *Node, alpha, beta, depth, qdepth int, eval ifaces.Evaluator) *Node {
 	standPat := eval(g, depth+qdepth)
+	if standPat >= beta {
+		n.Score = beta
+		return n
+	}
 	n.Score = standPat
 	if standPat > alpha {
 		alpha = standPat
 	}
-
 	mg := movegen.NewMoveGenerator(g)
 	mv := mg.NextCapture()
 	if mv == nil {

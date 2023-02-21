@@ -1,0 +1,19 @@
+Incorrect stand pat:
+
+ 56.7ms quiescence        91.5 x 108.5 alphabeta        606µs
+ 6.69ms quiescence_mat   101.5 x 98.5  alphabeta_mat    272µs
+ 18.2ms quiescence_psqt  113.5 x 86.5  alphabeta_psqt   387µs
+  627ms quiescenceII      70.5 x 129.5 alphabetaII      9.2ms
+ 44.9ms quiescenceII_mat  89.5 x 110.5 alphabetaII_mat  2.7ms
+231.8ms quiescenceII_psqt 61.5 x 138.5 alphabetaII_psqt 4.5ms
+
+Correct stand pat:
+
+ 26.1ms quiescence        107.5 x 92.5  alphabeta        626µs  : 30s
+ 3.95ms quiescence_mat    117.5 x 82.5  alphabeta_mat    272µs  : 2.95s
+ 8.14ms quiescence_psqt   147.5 x 52.5  alphabeta_psqt   379µs  : 5.95s
+262.6ms quiescenceII       91.0 x 109.0 alphabetaII      8.83ms : 3m42s
+ 26.7ms quiescenceII_mat  105.0 x 95.0  alphabetaII_mat  2.78ms : 21s
+ 74.0ms quiescenceII_psqt 112.5 x 87.5  alphabetaII_psqt 4.20ms : 53s
+
+
