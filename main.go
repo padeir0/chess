@@ -1,13 +1,16 @@
 package main
 
 import (
+	colors "chess/asciicolors"
 	xcmd "chess/command"
 	ck "chess/command/commandkind"
+	comps "chess/comparisons"
 	game "chess/game"
 	ifaces "chess/interfaces"
 
 	"chess/engines"
 
+	movegenTest "chess/movegen"
 	seggen "chess/movegen/segregated"
 
 	rs "chess/game/result"
@@ -130,6 +133,8 @@ func eval(cli *cliState, cmd *xcmd.Command) {
 		evalChampionship()
 	case ck.StopProfile:
 		pprof.StopCPUProfile()
+	case ck.Test:
+		test()
 	case ck.Show:
 		evalShow(cli, cmd)
 	}
@@ -222,115 +227,6 @@ func makeBoards(number int) []*game.Board {
 	return boards
 }
 
-func play20x(A, B ifaces.Engine) fightResult {
-	white := &engineScore{
-		eng:   A,
-		score: 0,
-		times: []time.Duration{},
-	}
-	black := &engineScore{
-		eng:   B,
-		score: 0,
-		times: []time.Duration{},
-	}
-	init := time.Now()
-	var numOfBoards = 10
-	boards := makeBoards(numOfBoards)
-	playprint(boards, white, black)
-	playprint(boards, black, white)
-
-	black.average = average(black.times)
-	black.times = nil
-	white.average = average(white.times)
-	white.times = nil
-	fmt.Printf("Comparison took: %v, Avg. %v: %v, Avg. %v: %v\n", time.Since(init), white.eng.String(), white.average, black.eng.String(), black.average)
-	fmt.Printf("Result: %v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
-
-	return fightResult{white, black}
-}
-
-func playprint(boards []*game.Board, white, black *engineScore) {
-	for i := 0; i < len(boards); i++ {
-		g := game.InitialGame(boards[i])
-		for !g.IsOver {
-			if g.BlackTurn {
-				start := time.Now()
-				black.eng.Play(g)
-				black.times = append(black.times, time.Since(start))
-			} else {
-				start := time.Now()
-				white.eng.Play(g)
-				white.times = append(white.times, time.Since(start))
-			}
-		}
-		switch g.Result {
-		case rs.Draw:
-			white.score += 0.5
-			black.score += 0.5
-			fmt.Println(g.Board.String())
-			fmt.Println(g.Moves)
-		case rs.WhiteWins:
-			white.score += 1
-		case rs.BlackWins:
-			black.score += 1
-		}
-		fmt.Printf("Result: %v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
-	}
-}
-
-func play100x(A, B ifaces.Engine, out chan fightResult) {
-	white := &engineScore{
-		eng:   A,
-		score: 0,
-		times: []time.Duration{},
-	}
-	black := &engineScore{
-		eng:   B,
-		score: 0,
-		times: []time.Duration{},
-	}
-	init := time.Now()
-	var numOfBoards = 50
-	boards := makeBoards(numOfBoards)
-	playoneside(boards, white, black)
-	playoneside(boards, black, white)
-
-	black.average = average(black.times)
-	black.times = nil
-	white.average = average(white.times)
-	white.times = nil
-	fmt.Printf("Comparison took: %v, Avg. %v: %v, Avg. %v: %v\n", time.Since(init), white.eng.String(), white.average, black.eng.String(), black.average)
-	fmt.Printf("Result: %v %0.1f x %0.1f %v\n", white.eng.String(), white.score, black.score, black.eng.String())
-
-	out <- fightResult{white, black}
-}
-
-func playoneside(boards []*game.Board, white, black *engineScore) {
-	for i := 0; i < len(boards); i++ {
-		g := game.InitialGame(boards[i])
-		for !g.IsOver {
-			if g.BlackTurn {
-				start := time.Now()
-				black.eng.Play(g)
-				black.times = append(black.times, time.Since(start))
-			} else {
-				start := time.Now()
-				white.eng.Play(g)
-				white.times = append(white.times, time.Since(start))
-			}
-		}
-		switch g.Result {
-		case rs.Draw:
-			white.score += 0.5
-			black.score += 0.5
-		case rs.WhiteWins:
-			white.score += 1
-		case rs.BlackWins:
-			black.score += 1
-		}
-	}
-}
-
 func evalCompare(cli *cliState, cmd *xcmd.Command) {
 	eng0Name := *cmd.Operands[0].Label
 	eng1Name := *cmd.Operands[1].Label
@@ -345,21 +241,10 @@ func evalCompare(cli *cliState, cmd *xcmd.Command) {
 		warn("engine not found: ", eng1Name)
 		return
 	}
-	res := play20x(eng0, eng1)
-	fmt.Println(res)
-}
-
-func average(times []time.Duration) time.Duration {
-	var sum time.Duration
-	for _, t := range times {
-		sum += t
-	}
-	return sum / time.Duration(len(times))
-}
-
-type fightResult struct {
-	A *engineScore
-	B *engineScore
+	start := time.Now()
+	res := comps.Compare(eng0, eng1, 200)
+	fmt.Println("final: ", res)
+	fmt.Println("comparison took: ", time.Since(start))
 }
 
 type duel struct {
@@ -367,137 +252,69 @@ type duel struct {
 	B ifaces.Engine
 }
 
-var fights = []duel{
+var duels = []duel{
 	{engines.Random, engines.RandCapt},
+	{engines.Minimax, engines.Random},
+	{engines.Minimax, engines.Minimax_Mat},
+	{engines.Minimax, engines.Minimax_Psqt},
+	{engines.Minimax, engines.RandCapt},
+	{engines.Minimax, engines.MinimaxII},
 
-	{engines.Random, engines.Minimax},
-	{engines.Random, engines.Minimax_Mat},
-	{engines.Random, engines.Minimax_Psqt},
-	{engines.Random, engines.MinimaxII},
-	{engines.Random, engines.MinimaxII_Mat},
-	{engines.Random, engines.MinimaxII_Psqt},
-
-	{engines.RandCapt, engines.Minimax},
-	{engines.RandCapt, engines.Minimax_Mat},
-	{engines.RandCapt, engines.Minimax_Psqt},
-	{engines.RandCapt, engines.MinimaxII},
-	{engines.RandCapt, engines.MinimaxII_Mat},
-	{engines.RandCapt, engines.MinimaxII_Psqt},
-
-	{engines.Minimax, engines.AlphaBeta},
-	{engines.Minimax_Mat, engines.AlphaBeta},
-	{engines.Minimax_Psqt, engines.AlphaBeta},
-	{engines.MinimaxII, engines.AlphaBeta},
-	{engines.MinimaxII_Mat, engines.AlphaBeta},
-	{engines.MinimaxII_Psqt, engines.AlphaBeta},
-
-	{engines.Minimax, engines.AlphaBeta_Mat},
-	{engines.Minimax_Mat, engines.AlphaBeta_Mat},
-	{engines.Minimax_Psqt, engines.AlphaBeta_Mat},
-	{engines.MinimaxII, engines.AlphaBeta_Mat},
-	{engines.MinimaxII_Mat, engines.AlphaBeta_Mat},
-	{engines.MinimaxII_Psqt, engines.AlphaBeta_Mat},
-
-	{engines.Minimax, engines.AlphaBeta_Psqt},
-	{engines.Minimax_Mat, engines.AlphaBeta_Psqt},
-	{engines.Minimax_Psqt, engines.AlphaBeta_Psqt},
-	{engines.MinimaxII, engines.AlphaBeta_Psqt},
-	{engines.MinimaxII_Mat, engines.AlphaBeta_Psqt},
-	{engines.MinimaxII_Psqt, engines.AlphaBeta_Psqt},
-
-	{engines.Minimax, engines.AlphaBetaIII},
-	{engines.Minimax_Mat, engines.AlphaBetaIII},
-	{engines.Minimax_Psqt, engines.AlphaBetaIII},
-	{engines.MinimaxII, engines.AlphaBetaIII},
-	{engines.MinimaxII_Mat, engines.AlphaBetaIII},
-	{engines.MinimaxII_Psqt, engines.AlphaBetaIII},
-
-	{engines.Minimax, engines.AlphaBetaIII_Mat},
-	{engines.Minimax_Mat, engines.AlphaBetaIII_Mat},
-	{engines.Minimax_Psqt, engines.AlphaBetaIII_Mat},
-	{engines.MinimaxII, engines.AlphaBetaIII_Mat},
-	{engines.MinimaxII_Mat, engines.AlphaBetaIII_Mat},
-	{engines.MinimaxII_Psqt, engines.AlphaBetaIII_Mat},
-
-	{engines.Minimax, engines.AlphaBetaIII_Psqt},
-	{engines.Minimax_Mat, engines.AlphaBetaIII_Psqt},
-	{engines.Minimax_Psqt, engines.AlphaBetaIII_Psqt},
-	{engines.MinimaxII, engines.AlphaBetaIII_Psqt},
-	{engines.MinimaxII_Mat, engines.AlphaBetaIII_Psqt},
-	{engines.MinimaxII_Psqt, engines.AlphaBetaIII_Psqt},
+	{engines.AlphaBeta, engines.RandCapt},
+	{engines.AlphaBeta, engines.AlphaBeta_Mat},
+	{engines.AlphaBeta, engines.AlphaBeta_Psqt},
+	{engines.AlphaBetaII, engines.AlphaBeta},
+	{engines.AlphaBetaIII, engines.AlphaBetaII},
 
 	{engines.Quiescence, engines.AlphaBeta},
-	{engines.Quiescence_Mat, engines.AlphaBeta},
-	{engines.Quiescence_Psqt, engines.AlphaBeta},
-	{engines.QuiescenceIII, engines.AlphaBeta},
-	{engines.QuiescenceIII_Mat, engines.AlphaBeta},
-	{engines.QuiescenceIII_Psqt, engines.AlphaBeta},
-
 	{engines.Quiescence, engines.AlphaBeta_Mat},
-	{engines.Quiescence_Mat, engines.AlphaBeta_Mat},
-	{engines.Quiescence_Psqt, engines.AlphaBeta_Mat},
-	{engines.QuiescenceIII, engines.AlphaBeta_Mat},
-	{engines.QuiescenceIII_Mat, engines.AlphaBeta_Mat},
-	{engines.QuiescenceIII_Psqt, engines.AlphaBeta_Mat},
-
 	{engines.Quiescence, engines.AlphaBeta_Psqt},
-	{engines.Quiescence_Mat, engines.AlphaBeta_Psqt},
-	{engines.Quiescence_Psqt, engines.AlphaBeta_Psqt},
-	{engines.QuiescenceIII, engines.AlphaBeta_Psqt},
-	{engines.QuiescenceIII_Mat, engines.AlphaBeta_Psqt},
-	{engines.QuiescenceIII_Psqt, engines.AlphaBeta_Psqt},
-
-	{engines.Quiescence, engines.AlphaBetaIII},
-	{engines.Quiescence_Mat, engines.AlphaBetaIII},
-	{engines.Quiescence_Psqt, engines.AlphaBetaIII},
 	{engines.QuiescenceIII, engines.AlphaBetaIII},
-	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII},
-	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII},
-
-	{engines.Quiescence, engines.AlphaBetaIII_Mat},
-	{engines.Quiescence_Mat, engines.AlphaBetaIII_Mat},
-	{engines.Quiescence_Psqt, engines.AlphaBetaIII_Mat},
 	{engines.QuiescenceIII, engines.AlphaBetaIII_Mat},
-	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Mat},
-	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Mat},
-
-	{engines.Quiescence, engines.AlphaBetaIII_Psqt},
-	{engines.Quiescence_Mat, engines.AlphaBetaIII_Psqt},
-	{engines.Quiescence_Psqt, engines.AlphaBetaIII_Psqt},
 	{engines.QuiescenceIII, engines.AlphaBetaIII_Psqt},
-	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Psqt},
-	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Psqt},
 }
 
 func evalChampionship() {
-	allFights := []fightResult{}
-	out := make(chan fightResult)
-	towork := make([][]duel, 6)
-	for i := range fights {
-		windex := i % 6
-		if len(towork[windex]) == 0 {
-			towork[windex] = []duel{}
-		}
-		towork[windex] = append(towork[windex], fights[i])
-	}
-	for _, worklist := range towork {
-		a := worklist
-		go func() {
-			for _, duel := range a {
-				play100x(duel.A, duel.B, out)
-			}
-		}()
-	}
-	for i := 0; i < len(fights); i++ {
-		allFights = append(allFights, <-out)
+	allFights := []comps.FightResult{}
+	for _, duel := range duels {
+		res := comps.Compare(duel.A, duel.B, 200)
+		allFights = append(allFights, res)
 	}
 	sort.Slice(allFights, func(i, j int) bool {
-		ires := math.Abs(allFights[i].A.score - allFights[i].B.score)
-		jres := math.Abs(allFights[j].A.score - allFights[j].B.score)
+		ires := math.Abs(allFights[i].White.Score - allFights[i].Black.Score)
+		jres := math.Abs(allFights[j].White.Score - allFights[j].Black.Score)
 		return ires < jres
 	})
 	fmt.Println("----------------FINAL-RESULT-----------------")
 	for _, fight := range allFights {
-		fmt.Printf("Result: %v %0.1f x %0.1f %v\n", fight.A.eng.String(), fight.A.score, fight.B.score, fight.B.eng.String())
+		fmt.Println(fight)
+	}
+}
+
+func test() {
+	g := game.InitialGame(game.InitialBoard())
+	err := movegenTest.TestMoveUnmove(g, 5)
+	if err != "" {
+		fmt.Printf("TestMoveUnmove %vfailed%v: %v\n", colors.Red, colors.Reset, err)
+	}
+	g = game.InitialGame(game.ShuffledBoard())
+	err = movegenTest.TestMoveUnmove(g, 5)
+	if err != "" {
+		fmt.Printf("TestMoveUnmove %vfailed%v: %v\n", colors.Red, colors.Reset, err)
+	}
+	g = game.InitialGame(game.ShuffledBoard())
+	err = movegenTest.TestMoveUnmove(g, 5)
+	if err != "" {
+		fmt.Printf("TestMoveUnmove %vfailed%v: %v\n", colors.Red, colors.Reset, err)
+	}
+
+	g = game.InitialGame(game.InitialBoard())
+	if !movegenTest.CompareGens(g, 4) {
+		fmt.Println("CompareGens failed")
+	}
+
+	g = game.InitialGame(game.ShuffledBoard())
+	if !movegenTest.CompareGens(g, 4) {
+		fmt.Println("CompareGens failed")
 	}
 }

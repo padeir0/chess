@@ -1,7 +1,7 @@
 package custom
 
 import (
-	. "chess/evals/common"
+	"chess/evals/common"
 	"chess/game"
 	pc "chess/game/piece"
 	rs "chess/game/result"
@@ -16,7 +16,6 @@ var _ ifaces.Evaluator = Evaluate
 //     mobility
 //         horsie, queen, bishop, rook, pawn
 //     piece value
-//         bishop pair
 //     king safety
 //         pawn and piece blockade
 //
@@ -27,9 +26,9 @@ func Evaluate(g *game.GameState, depth int) int {
 	if g.IsOver {
 		switch g.Result {
 		case rs.WhiteWins:
-			return ((10000 * 1023) - (30 - depth)) / 1024
+			return 10000
 		case rs.BlackWins:
-			return ((-10000 * 1023) - (30 - depth)) / 1024
+			return -10000
 		case rs.Draw:
 			return 0
 		}
@@ -44,7 +43,7 @@ func Evaluate(g *game.GameState, depth int) int {
 			Pos:     slot.Pos,
 			IsBlack: false,
 		}
-		total += getPieceWeight(g, pinfo) + GetPositionalWeight(isEndgame(g), false, slot.Piece, slot.Pos)
+		total += getPieceWeight(g, pinfo) + getPositionalWeight(isEndgame(g), pinfo)
 	}
 	for _, slot := range g.BlackPieces {
 		if slot.IsInvalid() {
@@ -55,7 +54,7 @@ func Evaluate(g *game.GameState, depth int) int {
 			Pos:     slot.Pos,
 			IsBlack: true,
 		}
-		total -= getPieceWeight(g, pinfo) + GetPositionalWeight(isEndgame(g), true, slot.Piece, slot.Pos)
+		total -= getPieceWeight(g, pinfo) + getPositionalWeight(isEndgame(g), pinfo)
 	}
 	return total
 }
@@ -114,9 +113,9 @@ func protectionWeight(g *game.GameState, pinfo *PieceInfo) int {
 		if piece != pc.Empty {
 			if piece.IsBlack() == pinfo.IsBlack {
 				if piece.IsPawnLike() {
+					weight += 5
+				} else if piece.IsRookLike() {
 					weight += 3
-				} else {
-					weight += 1
 				}
 			} else {
 				weight -= 5
@@ -138,6 +137,17 @@ func horsieMobility(g *game.GameState, pinfo *PieceInfo) int {
 			continue
 		}
 		piece := g.Board.AtPos(pos)
+		if piece == pc.Empty {
+			if pinfo.IsBlack {
+				if inKingRegion(g.WhiteKingPosition, pos) {
+					mobMod += 25
+				}
+			} else {
+				if inKingRegion(g.BlackKingPosition, pos) {
+					mobMod += 25
+				}
+			}
+		}
 		if piece != pc.Empty {
 			// this paints horsies as support pieces
 			if piece.IsBlack() != pinfo.IsBlack { // attacking
@@ -167,6 +177,15 @@ func rookMobility(g *game.GameState, pinfo *PieceInfo) int {
 			}
 			piece := g.Board.AtPos(pos)
 			if piece == pc.Empty {
+				if pinfo.IsBlack {
+					if inKingRegion(g.WhiteKingPosition, pos) {
+						mobMod += 15
+					}
+				} else {
+					if inKingRegion(g.BlackKingPosition, pos) {
+						mobMod += 15
+					}
+				}
 				mobMod += 5
 			} else if piece.IsBlack() != pinfo.IsBlack {
 				if piece.IsRookLike() {
@@ -196,6 +215,15 @@ func bishopMobility(g *game.GameState, pinfo *PieceInfo) int {
 			}
 			piece := g.Board.AtPos(pos)
 			if piece == pc.Empty {
+				if pinfo.IsBlack {
+					if inKingRegion(g.WhiteKingPosition, pos) {
+						mobMod += 35
+					}
+				} else {
+					if inKingRegion(g.BlackKingPosition, pos) {
+						mobMod += 35
+					}
+				}
 				mobMod += 5
 			} else if piece.IsBlack() != pinfo.IsBlack {
 				if piece.IsBishopLike() {
@@ -210,29 +238,6 @@ func bishopMobility(g *game.GameState, pinfo *PieceInfo) int {
 		}
 	}
 	return mobMod
-}
-
-// inneficient but will do for now
-func hasBishopPair(g *game.GameState, pinfo *PieceInfo) bool {
-	lightBishop := false
-	darkBishop := false
-	collection := &g.WhitePieces
-	if pinfo.IsBlack {
-		collection = &g.BlackPieces
-	}
-	for _, slot := range *collection {
-		if slot.Piece == pc.Empty {
-			continue
-		}
-		if slot.Piece == pc.BlackBishop {
-			if (slot.Pos.Column+slot.Pos.Row*8)%2 == 0 {
-				lightBishop = true
-			} else {
-				darkBishop = true
-			}
-		}
-	}
-	return lightBishop && darkBishop
 }
 
 func pawnWeight(g *game.GameState, pinfo *PieceInfo) int {
@@ -300,4 +305,137 @@ func hasFreeFront(g *game.GameState, pinfo *PieceInfo) bool {
 		}
 	}
 	return true
+}
+
+// favor pawns close to promotion
+// prefer pawn blockade on king side
+var pawn_md_psqt = common.PieceSquareTable{
+	0, 0, 0, 0, 0, 0, 0, 0,
+	100, 125, 90, 70, 70, 90, 125, 100,
+	80, 95, 60, 40, 40, 60, 95, 80,
+	50, 13, 6, 21, 23, 12, 17, -23,
+	20, -2, -5, 20, 20, 6, 10, -25,
+	0, -4, -4, -10, 3, 3, 33, -12,
+	-10, -1, -20, -23, -15, 24, 38, -22,
+	0, 0, 0, 0, 0, 0, 0, 0,
+}
+
+// favor pawns close to promotion, preferably on edges
+var pawn_ed_psqt = common.PieceSquareTable{
+	0, 0, 0, 0, 0, 0, 0, 0,
+	178, 173, 158, 134, 147, 132, 165, 187,
+	94, 100, 85, 67, 56, 53, 82, 84,
+	32, 24, 13, 5, -2, 4, 17, 17,
+	13, 9, -3, -7, -7, -8, 3, -1,
+	4, 7, -6, 1, 0, -5, -1, -8,
+	13, 8, 8, 10, 13, 0, 2, -7,
+	0, 0, 0, 0, 0, 0, 0, 0,
+}
+
+// avoid puting knight on edge
+// protect center squares
+var knight_psqt = common.PieceSquareTable{
+	-30, -5, -5, -5, -5, -5, -5, -30,
+	-10, 0, 0, 0, 0, 0, 0, -10,
+	-15, 0, 0, 0, 0, 0, 0, -15,
+	-20, 0, 0, 0, 0, 0, 0, -20,
+	-20, 0, 0, 0, 0, 0, 0, -20,
+	-20, 0, 20, 0, 0, 20, 0, -20,
+	-20, 0, 0, 0, 0, 0, 0, -20,
+	-50, -10, -10, -10, -10, -10, -10, -50,
+}
+
+// protect king behind pawns
+var king_md_psqt = common.PieceSquareTable{
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	-20, -10, -7, -5, 5, 20, 30, 20,
+}
+
+// centralize king on endgame
+var king_ed_psqt = common.PieceSquareTable{
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 5, 10, 10, 5, 0, 0,
+	0, 0, 10, 30, 30, 10, 0, 0,
+	0, 0, 10, 30, 30, 10, 0, 0,
+	0, 0, 5, 10, 10, 5, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+}
+
+// favor controling the center and flanks
+var rook_psqt = common.PieceSquareTable{
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 5, 10, 10, 5, 0, 0,
+	10, 20, 20, 10, 10, 20, 20, 10,
+	10, 20, 20, 10, 10, 20, 20, 10,
+	0, 0, 5, 10, 10, 5, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+}
+
+// favor controling the center from far
+var bishop_psqt = common.PieceSquareTable{
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 5, 5, 0, 0, 0,
+	0, 0, 5, 10, 10, 5, 0, 0,
+	0, 0, 5, 10, 10, 5, 0, 0,
+	10, 20, 20, 10, 10, 20, 20, 10,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+}
+
+func getPositionalWeight(isEndgame bool, pinfo *PieceInfo) int {
+	pos := pinfo.Pos
+	if pinfo.IsBlack {
+		pos = common.Mirror(pinfo.Pos)
+	}
+	if isEndgame {
+		switch pinfo.Piece {
+		case pc.WhitePawn, pc.BlackPawn:
+			return pawn_ed_psqt.AtPos(pos)
+		case pc.BlackKing, pc.WhiteKing:
+			return king_ed_psqt.AtPos(pos)
+		case pc.BlackKnight, pc.WhiteKnight:
+			return knight_psqt.AtPos(pos)
+		case pc.BlackRook, pc.WhiteRook:
+			return rook_psqt.AtPos(pos)
+		case pc.BlackBishop, pc.WhiteBishop:
+			return bishop_psqt.AtPos(pos)
+		}
+	}
+	switch pinfo.Piece {
+	case pc.WhitePawn, pc.BlackPawn:
+		return pawn_md_psqt.AtPos(pos)
+	case pc.BlackKing, pc.WhiteKing:
+		return king_md_psqt.AtPos(pos)
+	case pc.BlackKnight, pc.WhiteKnight:
+		return knight_psqt.AtPos(pos)
+	case pc.BlackRook, pc.WhiteRook:
+		return rook_psqt.AtPos(pos)
+	case pc.BlackBishop, pc.WhiteBishop:
+		return bishop_psqt.AtPos(pos)
+	}
+	return 0
+}
+
+func inKingRegion(kingPos, otherPos game.Point) bool {
+	for _, offset := range game.KingOffsets {
+		pos := game.Point{
+			Column: kingPos.Column + offset.Column,
+			Row:    kingPos.Row + offset.Row,
+		}
+		if pos == otherPos {
+			return true
+		}
+	}
+	return false
 }

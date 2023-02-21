@@ -427,6 +427,9 @@ func identifier(st *lexer) *lexeme {
 	case "championship":
 		tp = _cmd
 		cmdKind = ck.Championship
+	case "test":
+		tp = _cmd
+		cmdKind = ck.Test
 	case "no", "NO":
 		tp = _cmd
 		cmdKind = ck.NO
@@ -523,7 +526,7 @@ func checkCmd(cmd *Command) *Error {
 		return checkCmdProfile(cmd)
 	case ck.Compare:
 		return checkCmdCompare(cmd)
-	case ck.Championship, ck.Quit, ck.Clear, ck.NO, ck.StopProfile, ck.SelfPlay:
+	case ck.Championship, ck.Quit, ck.Clear, ck.NO, ck.StopProfile, ck.SelfPlay, ck.Test:
 		return nil
 	}
 	panic("invalid command")

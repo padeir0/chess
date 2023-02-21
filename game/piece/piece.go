@@ -79,18 +79,30 @@ func (this Piece) String() string {
 	case Empty:
 		return " "
 
-	case WhiteQueen, BlackQueen:
+	case WhiteQueen:
 		return "Q"
-	case WhiteKing, BlackKing:
+	case BlackQueen:
+		return "q"
+	case WhiteKing:
 		return "K"
-	case WhiteBishop, BlackBishop:
+	case BlackKing:
+		return "k"
+	case WhiteBishop:
 		return "B"
-	case WhiteRook, BlackRook:
+	case BlackBishop:
+		return "b"
+	case WhiteRook:
 		return "R"
-	case WhiteKnight, BlackKnight:
+	case BlackRook:
+		return "r"
+	case WhiteKnight:
 		return "N"
-	case WhitePawn, BlackPawn:
+	case BlackKnight:
+		return "n"
+	case WhitePawn:
 		return "P"
+	case BlackPawn:
+		return "p"
 	}
 	panic("should not be reached")
 }

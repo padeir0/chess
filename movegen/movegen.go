@@ -8,6 +8,112 @@ import (
 	"fmt"
 )
 
+// tests if the move/unmove behaviour is working properly
+// by taking multiple positions, moving until the game is over
+// then unmoving back to the original position and comparing
+// if it is unaltered
+// breadth is the number of positions (first moves) to test,
+// similar to the number of samples in a monte carlo search
+func TestMoveUnmove(g *game.GameState, breadth int) string {
+	startGen := seggen.NewMoveGenerator(g)
+	mv := startGen.Next()
+	for b := 0; b < breadth && mv != nil; b++ {
+		i := 0
+		startPos := g.Copy()
+		for !g.IsOver {
+			mvgen := seggen.NewMoveGenerator(g)
+			mvgen.Next()
+			i += 1
+		}
+		for ; i > 0; i-- {
+			g.UnMove()
+		}
+		err := CheckGameEquals(startPos, g)
+		if err != "" {
+			return err
+		}
+		g.UnMove()
+		mv = startGen.Next()
+	}
+	return ""
+}
+
+func CheckGameEquals(this *game.GameState, other *game.GameState) string {
+	if this.Board != other.Board {
+		return "boards don't match\n" +
+			this.Board.String() + "\n" +
+			other.Board.String() + "\n"
+	}
+	if this.BlackTurn != other.BlackTurn {
+		return fmt.Sprintf("turns doesn't match: %v, %v",
+			this.BlackTurn, other.BlackTurn)
+	}
+	if this.WhiteKingPosition != other.WhiteKingPosition {
+		return fmt.Sprintf("white king position doesn't match: %v, %v",
+			this.WhiteKingPosition, other.WhiteKingPosition)
+	}
+	if this.BlackKingPosition != other.BlackKingPosition {
+		return fmt.Sprintf("black king position doesn't match: %v, %v",
+			this.BlackKingPosition, other.BlackKingPosition)
+	}
+	if this.IsOver != other.IsOver {
+		return fmt.Sprintf("isOver doesn't match: %v, %v",
+			this.IsOver, other.IsOver)
+	}
+	if this.Result != other.Result {
+		return fmt.Sprintf("result doesn't match: %v, %v",
+			this.Result, other.Result)
+	}
+	if this.MovesSinceLastCapture != other.MovesSinceLastCapture {
+		return fmt.Sprintf("MovesSinceLastCapture doesn't match: %v, %v",
+			this.MovesSinceLastCapture, other.MovesSinceLastCapture)
+	}
+	if this.TotalValuablePieces != other.TotalValuablePieces {
+		return fmt.Sprintf("TotalValuablePieces doesn't match: %v, %v",
+			this.TotalValuablePieces, other.TotalValuablePieces)
+	}
+	// this may be wrong since pieces may be unordered
+	// we may need to sort and remove invalid slots
+	game.OrderSlots(this.WhitePieces)
+	game.OrderSlots(other.WhitePieces)
+	if len(this.WhitePieces) != len(other.WhitePieces) {
+		return fmt.Sprintf("white pieces length doesn't match: %v, %v",
+			len(this.WhitePieces), len(other.WhitePieces))
+	}
+	for i := range this.WhitePieces {
+		if this.WhitePieces[i] != other.WhitePieces[i] {
+			return "white piece " +
+				this.WhitePieces[i].String() +
+				" doesn't match with " +
+				other.WhitePieces[i].String() +
+				fmt.Sprintf("\n%v\n%v\n", this.WhitePieces, other.WhitePieces)
+		}
+	}
+	game.OrderSlots(this.BlackPieces)
+	game.OrderSlots(other.BlackPieces)
+	if len(this.BlackPieces) != len(other.BlackPieces) {
+		return fmt.Sprintf("black pieces length doesn't match: %v, %v",
+			len(this.BlackPieces), len(other.BlackPieces))
+	}
+	for i := range this.BlackPieces {
+		if this.BlackPieces[i] != other.BlackPieces[i] {
+			return "black piece " +
+				this.BlackPieces[i].String() +
+				" doesn't match with " +
+				other.BlackPieces[i].String() +
+				fmt.Sprintf("\n%v\n%v\n", this.BlackPieces, other.BlackPieces)
+		}
+	}
+	// this should be enough
+	thisMove, thisOk := this.Moves.Top()
+	otherMove, otherOk := other.Moves.Top()
+	if thisOk != otherOk || thisMove != otherMove {
+		return fmt.Sprintf("move history doesn't match: (%v, %v), (%v, %v)",
+			thisOk, thisMove, otherOk, otherMove)
+	}
+	return ""
+}
+
 // makes sure Segregated == Basic
 func CompareGens(g *game.GameState, depth int) bool {
 	if depth == 0 {

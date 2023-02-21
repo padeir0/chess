@@ -16,12 +16,18 @@ func (this CommandKind) String() string {
 		return "quit"
 	case Clear:
 		return "clear"
-	case Compare:
-		return "compare"
 	case Profile:
 		return "profile"
 	case StopProfile:
 		return "stopprofile"
+	case SelfPlay:
+		return "selfplay"
+	case Compare:
+		return "compare"
+	case Championship:
+		return "championship"
+	case Test:
+		return "test"
 	}
 	return "???"
 }
@@ -38,6 +44,8 @@ const (
 	SelfPlay
 	Compare
 	Championship
+
+	Test
 
 	Profile
 	StopProfile

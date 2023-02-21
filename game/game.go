@@ -88,11 +88,6 @@ func (this *Board) String() string {
 	return output
 }
 
-type Highlight struct {
-	Pos   Point
-	Color ac.Color
-}
-
 func (this *Board) Show(hls []Highlight) string {
 	m := map[int]ac.Color{}
 	for _, hl := range hls {
@@ -145,6 +140,23 @@ func (this *Board) Pop(pos Point) pc.Piece {
 	return ret
 }
 
+type Highlight struct {
+	Pos   Point
+	Color ac.Color
+}
+
+func MoveToHighlight(in []*Move) []Highlight {
+	out := []Highlight{}
+	for _, move := range in {
+		hl := Highlight{
+			Pos:   move.To,
+			Color: ac.BackgroundGreen,
+		}
+		out = append(out, hl)
+	}
+	return out
+}
+
 type Slot struct {
 	Piece pc.Piece
 	Pos   Point
@@ -156,6 +168,10 @@ func (this Slot) IsValid() bool {
 
 func (this Slot) IsInvalid() bool {
 	return this.Piece == pc.Empty || this.Piece == pc.InvalidPiece
+}
+
+func (this Slot) String() string {
+	return this.Piece.String() + this.Pos.String()
 }
 
 func NewPosition(s string) Point {
@@ -198,9 +214,6 @@ func InitialGame(board *Board) *GameState {
 		BlackTurn: false,
 		Board:     *board,
 
-		BlackKingPosition: Point{Row: 0, Column: 4},
-		WhiteKingPosition: Point{Row: 7, Column: 4},
-
 		BlackPieces: []Slot{},
 		WhitePieces: []Slot{},
 
@@ -222,14 +235,20 @@ func InitialGame(board *Board) *GameState {
 			} else {
 				game.BlackPieces = append(game.BlackPieces, slot)
 			}
+			if piece == pc.WhiteKing {
+				game.WhiteKingPosition = slot.Pos
+			}
+			if piece == pc.BlackKing {
+				game.BlackKingPosition = slot.Pos
+			}
 			if !piece.IsPawnLike() {
 				game.TotalValuablePieces += 1
 			}
 		}
 	}
 
-	orderByValue(game.WhitePieces)
-	orderByValue(game.BlackPieces)
+	OrderSlots(game.WhitePieces)
+	OrderSlots(game.BlackPieces)
 
 	return game
 }
@@ -314,18 +333,6 @@ type GameState struct {
 
 	TotalValuablePieces   int
 	MovesSinceLastCapture int
-}
-
-func MoveToHighlight(in []*Move) []Highlight {
-	out := []Highlight{}
-	for _, move := range in {
-		hl := Highlight{
-			Pos:   move.To,
-			Color: ac.BackgroundGreen,
-		}
-		out = append(out, hl)
-	}
-	return out
 }
 
 // for debugging
@@ -535,6 +542,9 @@ func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to 
 		}
 		// update capture
 		if capture != nil {
+			if capture.Piece == pc.BlackKing {
+				this.BlackKingPosition = Point{-1, -1}
+			}
 			for i, slot := range this.BlackPieces {
 				if slot.IsValid() && slot.Pos == capture.Pos {
 					this.BlackPieces[i] = Slot{pc.Empty, Point{0, 0}}
@@ -554,6 +564,9 @@ func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to 
 		}
 		// update capture
 		if capture != nil {
+			if capture.Piece == pc.WhiteKing {
+				this.WhiteKingPosition = Point{-1, -1}
+			}
 			for i, slot := range this.WhitePieces {
 				if slot.IsValid() && slot.Pos == capture.Pos {
 					this.WhitePieces[i] = Slot{pc.Empty, Point{0, 0}}
@@ -585,6 +598,9 @@ func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to
 		}
 		// update capture
 		if capture != nil {
+			if capture.Piece == pc.BlackKing {
+				this.BlackKingPosition = capture.Pos
+			}
 			sl := Slot{capture.Piece, capture.Pos}
 			for i, slot := range this.BlackPieces {
 				if slot.IsInvalid() {
@@ -606,6 +622,9 @@ func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to
 		}
 		// update capture
 		if capture != nil {
+			if capture.Piece == pc.WhiteKing {
+				this.WhiteKingPosition = capture.Pos
+			}
 			sl := Slot{capture.Piece, capture.Pos}
 			for i, slot := range this.WhitePieces {
 				if slot.IsInvalid() {
@@ -982,16 +1001,23 @@ var HorsieOffsets = []Point{
 	{+2, -1}, {+2, +1},
 }
 
-func orderByValue(a []Slot) {
-	sort.Slice(a, func(i, j int) bool {
+func OrderSlots(a []Slot) {
+	sort.SliceStable(a, func(i, j int) bool {
 		isl := a[i]
 		jsl := a[j]
-		if isl.Piece == pc.Empty || jsl.Piece == pc.Empty {
-			return false
+		if isl.Piece > jsl.Piece {
+			return false // order by value
 		}
-		if isl.Piece < jsl.Piece {
-			return true
+		// make sure we have deterministic ordering
+		if isl.Piece == jsl.Piece {
+			if isl.Pos.Column > jsl.Pos.Column {
+				return false
+			}
+			if isl.Pos.Column == jsl.Pos.Column &&
+				isl.Pos.Row > jsl.Pos.Row {
+				return false
+			}
 		}
-		return false
+		return true // should never happen, but ok
 	})
 }

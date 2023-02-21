@@ -13,7 +13,7 @@ func (this *PieceSquareTable) AtPos(pos game.Point) int {
 
 func GetPositionalWeight(isEndgame, isBlack bool, p pc.Piece, pos game.Point) int {
 	if isBlack {
-		pos = mirror(pos)
+		pos = Mirror(pos)
 	}
 	switch p {
 	case pc.WhiteQueen, pc.BlackQueen:
@@ -50,7 +50,7 @@ func GetPositionalWeight(isEndgame, isBlack bool, p pc.Piece, pos game.Point) in
 	return 0
 }
 
-func mirror(pos game.Point) game.Point {
+func Mirror(pos game.Point) game.Point {
 	return game.Point{
 		Row:    7 - pos.Row,
 		Column: 7 - pos.Column,
