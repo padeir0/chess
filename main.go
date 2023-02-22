@@ -176,7 +176,7 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 }
 
 func enginePlay(cli *cliState) {
-	engines.QuiescenceII.Play(cli.Curr)
+	engines.TypeB_Psqt.Play(cli.Curr)
 }
 
 func isOver(cli *cliState) bool {
@@ -253,6 +253,12 @@ type duel struct {
 }
 
 var duels = []duel{
+	//{engines.TypeB_Mat, engines.Random},
+	//{engines.TypeB_Mat, engines.RandCapt},
+	//{engines.TypeB_Mat, engines.AlphaBetaII_Mat},
+	//{engines.TypeB, engines.AlphaBetaII},
+	//{engines.TypeB_Psqt, engines.AlphaBetaII_Psqt},
+
 	//{engines.Random, engines.RandCapt},
 	//{engines.Minimax, engines.Random},
 	//{engines.Minimax, engines.Minimax_Mat},
@@ -274,9 +280,9 @@ var duels = []duel{
 	{engines.QuiescenceII_Mat, engines.AlphaBetaII_Mat},
 	{engines.QuiescenceII_Psqt, engines.AlphaBetaII_Psqt},
 
-	//{engines.QuiescenceIII, engines.AlphaBetaIII},
-	//{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Mat},
-	//{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Psqt},
+	{engines.QuiescenceIII, engines.AlphaBetaIII},
+	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Mat},
+	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Psqt},
 }
 
 func evalChampionship() {
@@ -304,24 +310,23 @@ func test() {
 	if err != "" {
 		fmt.Printf("TestMoveUnmove %vfailed%v: %v\n", colors.Red, colors.Reset, err)
 	}
-	g = game.InitialGame(game.ShuffledBoard())
-	err = movegenTest.TestMoveUnmove(g, 5)
-	if err != "" {
-		fmt.Printf("TestMoveUnmove %vfailed%v: %v\n", colors.Red, colors.Reset, err)
-	}
-	g = game.InitialGame(game.ShuffledBoard())
-	err = movegenTest.TestMoveUnmove(g, 5)
-	if err != "" {
-		fmt.Printf("TestMoveUnmove %vfailed%v: %v\n", colors.Red, colors.Reset, err)
+	for i := 0; i < 10; i++ {
+		g = game.InitialGame(game.ShuffledBoard())
+		err = movegenTest.TestMoveUnmove(g, 5)
+		if err != "" {
+			fmt.Printf("TestMoveUnmove %vfailed%v: %v\n", colors.Red, colors.Reset, err)
+		}
 	}
 
 	g = game.InitialGame(game.InitialBoard())
-	if !movegenTest.CompareGens(g, 4) {
+	if !movegenTest.CompareGens(g, 5) {
 		fmt.Println("CompareGens failed")
 	}
 
-	g = game.InitialGame(game.ShuffledBoard())
-	if !movegenTest.CompareGens(g, 4) {
-		fmt.Println("CompareGens failed")
+	for i := 0; i < 10; i++ {
+		g = game.InitialGame(game.ShuffledBoard())
+		if !movegenTest.CompareGens(g, 5) {
+			fmt.Println("CompareGens failed")
+		}
 	}
 }

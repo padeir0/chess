@@ -53,6 +53,30 @@ func (this *IntermediateEngine) String() string {
 	return this.Name
 }
 
-type BasicSearch func(g *game.GameState, eval Evaluator, depth int) *game.Move
-type ExtendedSearch func(g *game.GameState, eval Evaluator, extdepth, depth int) *game.Move
+// IntermediateEngine prefers to do evaluation on leaf
+// nodes that are quiet, but may fall short if necessary.
+// Does not use any form of precomputation
+type TypeBEngine struct {
+	Name    string
+	Search  TypeBSearch
+	Eval    Evaluator
+	Depth   int
+	Breadth []int
+}
+
+func (this *TypeBEngine) Play(g *game.GameState) {
+	bestMove := this.Search(g, this.Eval, this.Depth, this.Breadth)
+	ok, _ := g.Move(bestMove.From, bestMove.To)
+	if !ok {
+		panic("engine made ilegal move")
+	}
+}
+
+func (this *TypeBEngine) String() string {
+	return this.Name
+}
+
+type BasicSearch func(g *game.GameState, eval Evaluator, depth int) game.Move
+type ExtendedSearch func(g *game.GameState, eval Evaluator, extdepth, depth int) game.Move
+type TypeBSearch func(g *game.GameState, eval Evaluator, depth int, breadth []int) game.Move
 type Evaluator func(g *game.GameState, depth int) int

@@ -9,7 +9,7 @@ import (
 
 var _ ifaces.BasicSearch = BestMove
 
-func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
+func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) game.Move {
 	newG := g.Copy()
 	mvgen := movegen.NewMoveGenerator(newG)
 	captures := movegen.ConsumeAllCaptures(mvgen)
@@ -22,5 +22,5 @@ func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
 		i := rand.Intn(len(quiets))
 		return quiets[i]
 	}
-	return game.NullMove
+	return *game.NullMove
 }

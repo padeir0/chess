@@ -3,7 +3,7 @@ package common
 import "chess/game"
 
 type Generator interface {
-	Next() *game.Move
+	Next() (game.Move, bool)
 }
 
 type MovesFor struct {

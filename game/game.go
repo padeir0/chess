@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func debugBoard(slots []*Slot) *Board {
+func DebugBoard(slots ...*Slot) *Board {
 	b := Board{}
 	for i := 0; i < 64; i++ {
 		b[i] = pc.Empty
@@ -145,7 +145,7 @@ type Highlight struct {
 	Color ac.Color
 }
 
-func MoveToHighlight(in []*Move) []Highlight {
+func MoveToHighlight(in []Move) []Highlight {
 	out := []Highlight{}
 	for _, move := range in {
 		hl := Highlight{
@@ -335,20 +335,63 @@ type GameState struct {
 	MovesSinceLastCapture int
 }
 
-// for debugging
-func (this *GameState) CheckPieces() bool {
+func checkPiecesInTheSameSquare(s []Slot) string {
 	unique := map[Point]pc.Piece{}
-	for _, slot := range this.BlackPieces {
+	for _, slot := range s {
 		if slot.IsInvalid() {
 			continue
 		}
 		_, ok := unique[slot.Pos]
 		if ok {
-			return true
+			return slot.String()
 		}
 		unique[slot.Pos] = slot.Piece
 	}
-	return false
+	return ""
+}
+
+func checkPieceOnTheWrongPlace(b *Board, s []Slot) string {
+	for _, slot := range s {
+		if slot.IsInvalid() {
+			continue
+		}
+		piece := b.AtPos(slot.Pos)
+		if piece != slot.Piece {
+			return piece.String() + "!=" + slot.Piece.String()
+		}
+	}
+	return ""
+}
+
+func checkKings(g *GameState) string {
+	if g.BlackKingPosition.IsValid() && g.Board.AtPos(g.BlackKingPosition) != pc.BlackKing {
+		return "black king in wrong place: " + g.BlackKingPosition.String()
+	}
+	if g.WhiteKingPosition.IsValid() && g.Board.AtPos(g.WhiteKingPosition) != pc.WhiteKing {
+		return "white king in wrong place: " + g.WhiteKingPosition.String()
+	}
+	return ""
+}
+
+// for debugging
+func (this *GameState) CheckInvalid() string {
+	err := checkPiecesInTheSameSquare(this.BlackPieces)
+	if err != "" {
+		return "two black pieces in the same square: " + err
+	}
+	err = checkPiecesInTheSameSquare(this.WhitePieces)
+	if err != "" {
+		return "two white pieces in the same square: " + err
+	}
+	err = checkPieceOnTheWrongPlace(&this.Board, this.BlackPieces)
+	if err != "" {
+		return "a white piece is on the wrong place: " + err
+	}
+	err = checkPieceOnTheWrongPlace(&this.Board, this.WhitePieces)
+	if err != "" {
+		return "a white piece is on the wrong place: " + err
+	}
+	return checkKings(this)
 }
 
 func (this *GameState) Copy() *GameState {
@@ -977,6 +1020,12 @@ func (this *Move) IsPass() bool {
 }
 
 var KingOffsets = []Point{
+	{-1, -1}, {-1, 0}, {-1, 1},
+	{0, -1} /*    */, {0, 1},
+	{1, -1}, {1, 0}, {1, 1},
+}
+
+var QueenOffsets = []Point{
 	{-1, -1}, {-1, 0}, {-1, 1},
 	{0, -1} /*    */, {0, 1},
 	{1, -1}, {1, 0}, {1, 1},

@@ -16,24 +16,36 @@ import (
 // similar to the number of samples in a monte carlo search
 func TestMoveUnmove(g *game.GameState, breadth int) string {
 	startGen := seggen.NewMoveGenerator(g)
-	mv := startGen.Next()
-	for b := 0; b < breadth && mv != nil; b++ {
+	_, ok := startGen.Next()
+	for b := 0; b < breadth && ok; b++ {
 		i := 0
 		startPos := g.Copy()
 		for !g.IsOver {
 			mvgen := seggen.NewMoveGenerator(g)
 			mvgen.Next()
+			err := g.CheckInvalid()
+			if err != "" {
+				return err
+			}
 			i += 1
 		}
 		for ; i > 0; i-- {
 			g.UnMove()
 		}
-		err := CheckGameEquals(startPos, g)
+		err := g.CheckInvalid()
+		if err != "" {
+			return err
+		}
+		err = startPos.CheckInvalid()
+		if err != "" {
+			return err
+		}
+		err = CheckGameEquals(startPos, g)
 		if err != "" {
 			return err
 		}
 		g.UnMove()
-		mv = startGen.Next()
+		_, ok = startGen.Next()
 	}
 	return ""
 }
@@ -128,7 +140,12 @@ func CompareGens(g *game.GameState, depth int) bool {
 	mvs2 := basicgen.ConsumeAll(mgen2)
 
 	if len(mvs) != len(mvs2) {
+		fmt.Println(newG.Board.String())
+		fmt.Println(newG2.Board.String())
+		fmt.Println("segregated")
 		fmt.Println(mvs)
+		fmt.Println()
+		fmt.Println("basic")
 		fmt.Println(mvs2)
 		return false
 	}
@@ -179,7 +196,7 @@ type move struct {
 	mslc     int
 }
 
-func move2move(mv *game.Move) move {
+func move2move(mv game.Move) move {
 	if mv.Capture != nil {
 		return move{
 			from:     mv.From,

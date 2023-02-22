@@ -35,7 +35,7 @@ func Min(a, b *Node) *Node {
 }
 
 type Node struct {
-	Move *game.Move
+	Move game.Move
 
 	Score int
 
@@ -79,8 +79,8 @@ func (this *Node) HasDuplicates() bool {
 	return false
 }
 
-func (this *Node) Best(isBlackturn bool) (*game.Move, int) {
-	var output *game.Move
+func (this *Node) Best(isBlackturn bool) (game.Move, int) {
+	var output game.Move
 	if isBlackturn {
 		var bestScore int = PlusInf
 		for _, leaf := range this.Leaves {

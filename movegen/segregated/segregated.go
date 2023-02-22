@@ -5,39 +5,41 @@ import (
 	"chess/game"
 	pc "chess/game/piece"
 	. "chess/movegen/common"
+
+	"fmt"
 )
 
 var _ Generator = &MoveGenerator{}
 
-func ConsumeAll(mg *MoveGenerator) []*game.Move {
-	output := []*game.Move{}
-	mv := mg.Next()
-	for mv != nil {
+func ConsumeAll(mg *MoveGenerator) []game.Move {
+	output := []game.Move{}
+	mv, ok := mg.Next()
+	for ok {
 		output = append(output, mv)
 		mg.g.UnMove()
-		mv = mg.Next()
+		mv, ok = mg.Next()
 	}
 	return output
 }
 
-func ConsumeAllQuiet(mg *MoveGenerator) []*game.Move {
-	output := []*game.Move{}
-	mv := mg.NextQuiet()
-	for mv != nil {
+func ConsumeAllQuiet(mg *MoveGenerator) []game.Move {
+	output := []game.Move{}
+	mv, ok := mg.NextQuiet()
+	for ok {
 		output = append(output, mv)
 		mg.g.UnMove()
-		mv = mg.NextQuiet()
+		mv, ok = mg.NextQuiet()
 	}
 	return output
 }
 
-func ConsumeAllCaptures(mg *MoveGenerator) []*game.Move {
-	output := []*game.Move{}
-	mv := mg.NextCapture()
-	for mv != nil {
+func ConsumeAllCaptures(mg *MoveGenerator) []game.Move {
+	output := []game.Move{}
+	mv, ok := mg.NextCapture()
+	for ok {
 		output = append(output, mv)
 		mg.g.UnMove()
-		mv = mg.NextCapture()
+		mv, ok = mg.NextCapture()
 	}
 	return output
 }
@@ -57,234 +59,240 @@ func NewMoveGenerator(g *game.GameState) *MoveGenerator {
 type MoveGenerator struct {
 	g *game.GameState
 
-	quietPseudo     *MovesFor
+	currQuietOffset int
 	currQuietPseudo int
 	currQuietSlot   int
 
-	pseudoCapture     *MovesFor
+	currCaptureOffset int
 	currPseudoCapture int
 	currCaptureSlot   int
 
 	slots *[]game.Slot // hopefully it's ordered
 }
 
-func (this *MoveGenerator) NextCapture() *game.Move {
+func (this *MoveGenerator) NextCapture() (game.Move, bool) {
 	for this.currCaptureSlot < len(*this.slots) {
 		slot := (*this.slots)[this.currCaptureSlot]
-		piece := slot.Piece // Move() may alter the slot
 		if slot.Piece == pc.Empty {
-			this.pseudoCapture = nil
 			this.currCaptureSlot++
+			this.currPseudoCapture = 0
+			this.currCaptureOffset = 0
 			continue
 		}
-		if this.pseudoCapture == nil {
-			moves := genMoves(this.g, slot.Pos, slot.Piece, false)
-			this.pseudoCapture = &MovesFor{
-				From: slot.Pos,
-				To:   moves,
-			}
-			this.currPseudoCapture = 0
-		}
-		for this.currPseudoCapture < len(this.pseudoCapture.To) {
-			to := this.pseudoCapture.To[this.currPseudoCapture]
-			this.currPseudoCapture++
+		to, hasMove := this.nextMove(slot.Pos, slot.Piece, false)
+		for hasMove {
 			lastCapt := this.g.MovesSinceLastCapture
-			ok, capture := this.g.Move(this.pseudoCapture.From, to)
+			ok, capture := this.g.Move(slot.Pos, to)
 			if ok && capture != nil {
-				move := &game.Move{
-					Piece:   piece,
-					From:    this.pseudoCapture.From,
+				move := game.Move{
+					Piece:   slot.Piece,
+					From:    slot.Pos,
 					To:      to,
 					Capture: capture,
 
 					MovesSinceLastCapture: lastCapt,
 				}
-				return move
+				return move, true
 			} else if ok && capture == nil {
+				fmt.Println(this.g.Board.String())
+				fmt.Println(this.g.Moves)
+				fmt.Println(this.currCaptureSlot, this.currCaptureOffset, this.currPseudoCapture)
+				fmt.Println(slot.Piece, slot.Pos, to, capture)
+				fmt.Println(slot)
+				err := this.g.CheckInvalid()
+				if err != "" {
+					panic(err)
+				}
 				panic("should have captured something")
 			}
+			to, hasMove = this.nextMove(slot.Pos, slot.Piece, false)
 		}
-		this.pseudoCapture = nil
+		this.currPseudoCapture = 0
+		this.currCaptureOffset = 0
 		this.currCaptureSlot++
 	}
-	return nil
+	return game.Move{}, false
 }
 
-func (this *MoveGenerator) NextQuiet() *game.Move {
+func (this *MoveGenerator) NextQuiet() (game.Move, bool) {
 	for this.currQuietSlot < len(*this.slots) {
 		slot := (*this.slots)[this.currQuietSlot]
-		piece := slot.Piece // Move() may alter the slot
 		if slot.Piece == pc.Empty {
-			this.quietPseudo = nil
 			this.currQuietSlot++
+			this.currQuietPseudo = 0
+			this.currQuietOffset = 0
 			continue
 		}
-		if this.quietPseudo == nil {
-			moves := genMoves(this.g, slot.Pos, slot.Piece, true)
-			this.quietPseudo = &MovesFor{
-				From: slot.Pos,
-				To:   moves,
-			}
-			this.currQuietPseudo = 0
-		}
-		for this.currQuietPseudo < len(this.quietPseudo.To) {
-			to := this.quietPseudo.To[this.currQuietPseudo]
-			this.currQuietPseudo++
+		to, hasMove := this.nextMove(slot.Pos, slot.Piece, true)
+		for hasMove {
 			lastCapt := this.g.MovesSinceLastCapture
-			ok, capture := this.g.Move(this.quietPseudo.From, to)
+			ok, capture := this.g.Move(slot.Pos, to)
 			if ok && capture == nil {
-				move := &game.Move{
-					Piece:   piece,
-					From:    this.quietPseudo.From,
+				move := game.Move{
+					Piece:   slot.Piece,
+					From:    slot.Pos,
 					To:      to,
 					Capture: capture,
 
 					MovesSinceLastCapture: lastCapt,
 				}
-				return move
+				return move, true
 			} else if capture != nil {
+				fmt.Println(this.currCaptureSlot, this.currPseudoCapture)
+				fmt.Println(slot.Piece, slot.Pos, to, capture)
+				err := this.g.CheckInvalid()
+				if err != "" {
+					panic(err)
+				}
 				panic("should not have captured something")
 			}
+			to, hasMove = this.nextMove(slot.Pos, slot.Piece, true)
 		}
-		this.quietPseudo = nil
+		this.currQuietPseudo = 0
+		this.currQuietOffset = 0
 		this.currQuietSlot++
 	}
-	return nil
+	return game.Move{}, false
 }
 
-func (this *MoveGenerator) Next() *game.Move {
-	capt := this.NextCapture()
-	if capt != nil {
-		return capt
+func (this *MoveGenerator) Next() (game.Move, bool) {
+	capt, ok := this.NextCapture()
+	if ok {
+		return capt, ok
 	}
 	return this.NextQuiet()
 }
 
-func genMoves(g *game.GameState, Pos game.Point, piece pc.Piece, quiet bool) []game.Point {
+// generates pseudolegal moves
+func (this *MoveGenerator) nextMove(Pos game.Point, piece pc.Piece, quiet bool) (game.Point, bool) {
 	switch piece {
 	case pc.BlackKing, pc.WhiteKing:
-		return genKingMoves(g, Pos, quiet)
+		return this.nextSimpleMove(Pos, quiet, game.KingOffsets)
 	case pc.BlackKnight, pc.WhiteKnight:
-		return genHorsieMoves(g, Pos, quiet)
+		return this.nextSimpleMove(Pos, quiet, game.HorsieOffsets)
 	case pc.BlackQueen, pc.WhiteQueen:
-		return genQueenMoves(g, Pos, quiet)
+		return this.nextSlideMove(Pos, quiet, game.QueenOffsets)
 	case pc.BlackBishop, pc.WhiteBishop:
-		return genBishopMoves(g, Pos, quiet)
+		return this.nextSlideMove(Pos, quiet, game.BishopOffsets)
 	case pc.BlackRook, pc.WhiteRook:
-		return genRookMoves(g, Pos, quiet)
+		return this.nextSlideMove(Pos, quiet, game.RookOffsets)
 	case pc.BlackPawn:
-		return genBlackPawnMoves(Pos, quiet)
+		return this.nextBlackPawnMove(Pos, quiet)
 	case pc.WhitePawn:
-		return genWhitePawnMoves(Pos, quiet)
+		return this.nextWhitePawnMove(Pos, quiet)
 	}
-	return nil
+	return game.Point{}, false
 }
 
-func genKingMoves(g *game.GameState, pos game.Point, quiet bool) []game.Point {
-	output := []game.Point{}
-	for _, offset := range game.KingOffsets {
+// for pieces that can move to fixed squares (King, Knight)
+func (this *MoveGenerator) nextSimpleMove(pos game.Point, quiet bool, offsets []game.Point) (game.Point, bool) {
+	currOffset := &this.currCaptureOffset
+	if quiet {
+		currOffset = &this.currQuietOffset
+	}
+	for ; *currOffset < len(offsets); *currOffset++ {
+		offset := offsets[*currOffset]
 		newpos := game.Point{
 			Column: pos.Column + offset.Column,
 			Row:    pos.Row + offset.Row,
 		}
-		if newpos.IsInvalid() {
-			continue
-		}
-		if g.Board.AtPos(newpos).IsOccupied() != quiet {
-			output = append(output, newpos)
-		}
-	}
-	return output
-}
-
-func genHorsieMoves(g *game.GameState, pos game.Point, quiet bool) []game.Point {
-	output := []game.Point{}
-	for _, offset := range game.HorsieOffsets {
-		newpos := game.Point{
-			Column: pos.Column + offset.Column,
-			Row:    pos.Row + offset.Row,
+		if newpos == pos {
+			panic("null move")
 		}
 		if newpos.IsInvalid() {
 			continue
 		}
-		if g.Board.AtPos(newpos).IsOccupied() != quiet {
-			output = append(output, newpos)
+		piece := this.g.Board.AtPos(newpos)
+		if piece.IsOccupied() != quiet {
+			*currOffset += 1
+			return newpos, true
 		}
 	}
-	return output
+	*currOffset = 0
+	return game.Point{}, false
 }
 
-func genRookMoves(g *game.GameState, from game.Point, quiet bool) []game.Point {
-	output := []game.Point{}
-	for _, offset := range game.RookOffsets {
-		for i := 1; i < 7; i++ {
-			pos := game.Point{
-				Column: from.Column + (offset.Column * i),
-				Row:    from.Row + (offset.Row * i),
+// for pieces that can slide (Queen, Rook, Bishop)
+func (this *MoveGenerator) nextSlideMove(from game.Point, quiet bool, offsets []game.Point) (game.Point, bool) {
+	currOffset := &this.currCaptureOffset
+	if quiet {
+		currOffset = &this.currQuietOffset
+	}
+	currPseudo := &this.currPseudoCapture
+	if quiet {
+		currPseudo = &this.currQuietPseudo
+	}
+
+	for *currOffset < len(offsets) {
+		offset := offsets[*currOffset]
+		for *currPseudo < 7 {
+			newpos := game.Point{
+				Column: from.Column + (offset.Column * (*currPseudo + 1)),
+				Row:    from.Row + (offset.Row * (*currPseudo + 1)),
 			}
-			if pos.IsInvalid() {
+			if newpos.IsInvalid() {
+				*currPseudo = 0
 				break
 			}
-			piece := g.Board.AtPos(pos)
-			if piece.IsOccupied() != quiet {
-				output = append(output, pos)
+			piece := this.g.Board.AtPos(newpos)
+			isOccupied := piece.IsOccupied()
+			if isOccupied != quiet {
+				// if it is occupied we want to stop sliding even after the return
+				if isOccupied {
+					*currPseudo = 0
+					*currOffset += 1
+				} else {
+					*currPseudo += 1
+				}
+				return newpos, true
 			}
-			if piece.IsOccupied() {
-				break // something is blocking the way
-			}
-		}
-	}
-	return output
-}
-
-func genBishopMoves(g *game.GameState, from game.Point, quiet bool) []game.Point {
-	output := []game.Point{}
-	for _, offset := range game.BishopOffsets {
-		for i := 1; i < 7; i++ {
-			to := game.Point{
-				Column: from.Column + (offset.Column * i),
-				Row:    from.Row + (offset.Row * i),
-			}
-			if to.IsInvalid() {
+			// if something is blocking the way, we stop sliding
+			if isOccupied {
+				*currPseudo = 0
 				break
 			}
-			piece := g.Board.AtPos(to)
-			if piece.IsOccupied() != quiet {
-				output = append(output, to)
-			}
-			if piece.IsOccupied() {
-				break // something is blocking the way
-			}
+			*currPseudo += 1
 		}
+		*currPseudo = 0
+		*currOffset += 1
 	}
-
-	return output
+	return game.Point{}, false
 }
 
-func genQueenMoves(g *game.GameState, pos game.Point, quiet bool) []game.Point {
-	return append(genBishopMoves(g, pos, quiet), genRookMoves(g, pos, quiet)...)
-}
-
-func genBlackPawnMoves(pos game.Point, quiet bool) []game.Point {
+func (this *MoveGenerator) nextBlackPawnMove(pos game.Point, quiet bool) (game.Point, bool) {
 	if quiet {
-		return []game.Point{
-			{Row: pos.Row + 1, Column: pos.Column},
+		if this.currQuietOffset == 0 {
+			this.currQuietOffset++
+			return game.Point{Row: pos.Row + 1, Column: pos.Column}, true
 		}
+		return game.Point{}, false
 	}
-	return []game.Point{
-		{Row: pos.Row + 1, Column: pos.Column - 1},
-		{Row: pos.Row + 1, Column: pos.Column + 1},
+	if this.currCaptureOffset == 0 {
+		this.currCaptureOffset++
+		return game.Point{Row: pos.Row + 1, Column: pos.Column - 1}, true
 	}
+	if this.currCaptureOffset == 1 {
+		this.currCaptureOffset++
+		return game.Point{Row: pos.Row + 1, Column: pos.Column + 1}, true
+	}
+	return game.Point{}, false
 }
 
-func genWhitePawnMoves(pos game.Point, quiet bool) []game.Point {
+func (this *MoveGenerator) nextWhitePawnMove(pos game.Point, quiet bool) (game.Point, bool) {
 	if quiet {
-		return []game.Point{
-			{Row: pos.Row - 1, Column: pos.Column},
+		if this.currQuietOffset == 0 {
+			this.currQuietOffset++
+			return game.Point{Row: pos.Row - 1, Column: pos.Column}, true
 		}
+		return game.Point{}, false
 	}
-	return []game.Point{
-		{Row: pos.Row - 1, Column: pos.Column - 1},
-		{Row: pos.Row - 1, Column: pos.Column + 1},
+	if this.currCaptureOffset == 0 {
+		this.currCaptureOffset++
+		return game.Point{Row: pos.Row - 1, Column: pos.Column - 1}, true
 	}
+	if this.currCaptureOffset == 1 {
+		this.currCaptureOffset++
+		return game.Point{Row: pos.Row - 1, Column: pos.Column + 1}, true
+	}
+	return game.Point{}, false
 }

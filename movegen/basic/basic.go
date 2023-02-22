@@ -9,13 +9,13 @@ import (
 
 var _ Generator = &MoveGenerator{}
 
-func ConsumeAll(mg *MoveGenerator) []*game.Move {
-	output := []*game.Move{}
-	mv := mg.Next()
-	for mv != nil {
+func ConsumeAll(mg *MoveGenerator) []game.Move {
+	output := []game.Move{}
+	mv, ok := mg.Next()
+	for ok {
 		output = append(output, mv)
 		mg.g.UnMove()
-		mv = mg.Next()
+		mv, ok = mg.Next()
 	}
 	return output
 }
@@ -41,7 +41,7 @@ type MoveGenerator struct {
 	currSlot int
 }
 
-func (this *MoveGenerator) Next() *game.Move {
+func (this *MoveGenerator) Next() (game.Move, bool) {
 	for this.currSlot < len(*this.slots) {
 		slot := (*this.slots)[this.currSlot]
 		piece := slot.Piece // Move() may alter the slot
@@ -64,7 +64,7 @@ func (this *MoveGenerator) Next() *game.Move {
 			lastCapt := this.g.MovesSinceLastCapture
 			ok, capture := this.g.Move(this.pseudoLegal.From, to)
 			if ok {
-				move := &game.Move{
+				move := game.Move{
 					Piece:   piece,
 					From:    this.pseudoLegal.From,
 					To:      to,
@@ -72,13 +72,13 @@ func (this *MoveGenerator) Next() *game.Move {
 
 					MovesSinceLastCapture: lastCapt,
 				}
-				return move
+				return move, true
 			}
 		}
 		this.pseudoLegal = nil
 		this.currSlot++
 	}
-	return nil
+	return game.Move{}, false
 }
 
 func PseudoLegalMoves(g *game.GameState, Pos game.Point, piece pc.Piece) []game.Point {
@@ -129,7 +129,7 @@ func genRookMoves(g *game.GameState, from game.Point) []game.Point {
 	output := []game.Point{}
 	fromPiece := g.Board.AtPos(from)
 	for _, offset := range game.RookOffsets {
-		for i := 1; i < 7; i++ {
+		for i := 1; i <= 7; i++ {
 			pos := game.Point{
 				Column: from.Column + (offset.Column * i),
 				Row:    from.Row + (offset.Row * i),
@@ -156,7 +156,7 @@ func genBishopMoves(g *game.GameState, from game.Point) []game.Point {
 
 	fromPiece := g.Board.AtPos(from)
 	for _, offset := range game.BishopOffsets {
-		for i := 1; i < 7; i++ {
+		for i := 1; i <= 7; i++ {
 			to := game.Point{
 				Column: from.Column + (offset.Column * i),
 				Row:    from.Row + (offset.Row * i),

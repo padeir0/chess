@@ -11,11 +11,11 @@ import (
 var _ ifaces.ExtendedSearch = BestMove
 var _ = fmt.Sprintf(":)")
 
-func BestMove(g *game.GameState, eval ifaces.Evaluator, qdepth, depth int) *game.Move {
+func BestMove(g *game.GameState, eval ifaces.Evaluator, qdepth, depth int) game.Move {
 	nodes = 0
 	qnodes = 0
 	n := &Node{
-		Move:  game.NullMove,
+		Move:  *game.NullMove,
 		Score: 314159,
 	}
 	bestMove := alphabeta(g, n, MinusInf, PlusInf, qdepth, depth, eval)
@@ -48,12 +48,12 @@ func alphabeta(g *game.GameState, n *Node, alpha, beta, qdepth, depth int, eval 
 
 func maximizingPlayer(g *game.GameState, n *Node, alpha, beta, qdepth, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
-	mv := mg.Next()
-	if mv == nil {
+	mv, ok := mg.Next()
+	if !ok {
 		panic("nil move!!")
 	}
 	var alphaMove *Node
-	for mv != nil {
+	for ok {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, qdepth, depth-1, eval)
 		n.AddLeaf(leaf)
@@ -67,7 +67,7 @@ func maximizingPlayer(g *game.GameState, n *Node, alpha, beta, qdepth, depth int
 			alpha = leaf.Score
 			alphaMove = leaf
 		}
-		mv = mg.Next()
+		mv, ok = mg.Next()
 	}
 	n.Score = alpha
 	return alphaMove
@@ -75,12 +75,12 @@ func maximizingPlayer(g *game.GameState, n *Node, alpha, beta, qdepth, depth int
 
 func minimizingPlayer(g *game.GameState, n *Node, alpha, beta, qdepth, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
-	mv := mg.Next()
-	if mv == nil {
+	mv, ok := mg.Next()
+	if !ok {
 		panic("nil move!!")
 	}
 	var betaMove *Node
-	for mv != nil {
+	for ok {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, qdepth, depth-1, eval)
 		n.AddLeaf(leaf)
@@ -94,7 +94,7 @@ func minimizingPlayer(g *game.GameState, n *Node, alpha, beta, qdepth, depth int
 			beta = leaf.Score
 			betaMove = leaf
 		}
-		mv = mg.Next()
+		mv, ok = mg.Next()
 	}
 	n.Score = beta
 	return betaMove
@@ -131,13 +131,13 @@ func quiesc_minimize(g *game.GameState, n *Node, alpha, beta, depth, qdepth int,
 	}
 
 	mg := movegen.NewMoveGenerator(g)
-	mv := mg.NextCapture()
-	if mv == nil {
+	mv, ok := mg.NextCapture()
+	if !ok {
 		n.Score = standPat
 		return n
 	}
 	var betaMove *Node
-	for mv != nil {
+	for ok {
 		leaf := &Node{Move: mv}
 		quiescence(g, leaf, alpha, beta, depth, qdepth-1, eval)
 		g.UnMove()
@@ -150,7 +150,7 @@ func quiesc_minimize(g *game.GameState, n *Node, alpha, beta, depth, qdepth int,
 			beta = leaf.Score
 			betaMove = leaf
 		}
-		mv = mg.NextCapture()
+		mv, ok = mg.NextCapture()
 	}
 	n.Score = beta
 	return betaMove
@@ -167,13 +167,13 @@ func quiesc_maximize(g *game.GameState, n *Node, alpha, beta, depth, qdepth int,
 		alpha = standPat
 	}
 	mg := movegen.NewMoveGenerator(g)
-	mv := mg.NextCapture()
-	if mv == nil {
+	mv, ok := mg.NextCapture()
+	if !ok {
 		n.Score = standPat
 		return n
 	}
 	var alphaMove *Node
-	for mv != nil {
+	for ok {
 		leaf := &Node{Move: mv}
 		quiescence(g, leaf, alpha, beta, depth, qdepth-1, eval)
 		g.UnMove()
@@ -186,7 +186,7 @@ func quiesc_maximize(g *game.GameState, n *Node, alpha, beta, depth, qdepth int,
 			alpha = leaf.Score
 			alphaMove = leaf
 		}
-		mv = mg.NextCapture()
+		mv, ok = mg.NextCapture()
 	}
 	n.Score = alpha
 	return alphaMove

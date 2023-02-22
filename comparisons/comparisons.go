@@ -5,6 +5,8 @@ import (
 	rs "chess/game/result"
 	ifaces "chess/interfaces"
 
+	colors "chess/asciicolors"
+
 	"fmt"
 	"runtime"
 	"sync"
@@ -93,7 +95,39 @@ func (this *duelWorkList) Start(procs int) []FightResult {
 	for i := 0; i < procs; i++ {
 		go work(this)
 	}
-	return this.GetResults()
+	ticker := time.NewTicker(200 * time.Millisecond)
+	go this.progressBarUwU(ticker)
+	results := this.GetResults()
+	ticker.Stop()
+	fmt.Print("\033[1A\033[K")
+	return results
+}
+
+func (this *duelWorkList) progressBarUwU(ticker *time.Ticker) {
+	fmt.Println()
+	for {
+		_, ok := <-ticker.C
+		if !ok {
+			break
+		}
+		processed := len(this.queue) - (this.top + 1)
+		total := len(this.queue)
+		bar := makebar(processed, total)
+		fmt.Printf("\033[1A\033[K%v %v / %v                       \n", bar, processed, total)
+	}
+}
+
+func makebar(processed, total int) string {
+	bars := (processed * 20 / total)
+	output := "|" + colors.BackgroundGreen
+	for i := 0; i < bars; i++ {
+		output += " "
+	}
+	output += colors.Reset
+	for i := bars; i < 20; i++ {
+		output += " "
+	}
+	return output + "|"
 }
 
 func work(workList *duelWorkList) {
@@ -108,7 +142,7 @@ func work(workList *duelWorkList) {
 type Duel struct {
 	White ifaces.Engine
 	Black ifaces.Engine
-	Board *game.Board
+	Board game.Board
 }
 
 func (this *Duel) run() FightResult {
@@ -122,7 +156,7 @@ func (this *Duel) run() FightResult {
 	}
 	whiteTimes := []time.Duration{}
 	blackTimes := []time.Duration{}
-	g := game.InitialGame(this.Board)
+	g := game.InitialGame(&this.Board)
 	for !g.IsOver {
 		if g.BlackTurn {
 			start := time.Now()
@@ -172,12 +206,12 @@ func makeDuels(A, B ifaces.Engine, number int) []*Duel {
 		duels[i] = &Duel{
 			White: A,
 			Black: B,
-			Board: board,
+			Board: *board,
 		}
 		duels[i+1] = &Duel{
 			White: B,
 			Black: A,
-			Board: board,
+			Board: *board,
 		}
 	}
 	return duels

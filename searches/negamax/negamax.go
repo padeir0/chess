@@ -8,9 +8,9 @@ import (
 	"fmt"
 )
 
-func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
+func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) game.Move {
 	n := &Node{
-		Move:  game.NullMove,
+		Move:  *game.NullMove,
 		Score: 314159,
 	}
 	newG := g.Copy()
@@ -33,11 +33,8 @@ func negaMax(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) (int,
 	bestScore := MinusInf
 	var bestNode *Node
 
-	for {
-		mv := mg.Next()
-		if mv == nil {
-			break
-		}
+	mv, ok := mg.Next()
+	for ok {
 		leaf := &Node{Move: mv}
 		score, _ := negaMax(g, leaf, depth-1, eval)
 		g.UnMove()
@@ -48,6 +45,7 @@ func negaMax(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) (int,
 			bestScore = -score
 			bestNode = leaf
 		}
+		mv, ok = mg.Next()
 	}
 	n.Score = bestNode.Score
 	return bestScore, bestNode

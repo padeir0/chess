@@ -11,9 +11,9 @@ import (
 var _ ifaces.BasicSearch = BestMove
 var _ = fmt.Sprintf(":)")
 
-func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
+func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) game.Move {
 	n := &Node{
-		Move:  game.NullMove,
+		Move:  *game.NullMove,
 		Score: 314159,
 	}
 	newG := g.Copy()
@@ -40,11 +40,8 @@ func miniMax(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) *Node
 func maximizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
 	var bestMove *Node
-	for {
-		mv := mg.Next()
-		if mv == nil {
-			break
-		}
+	mv, ok := mg.Next()
+	for ok {
 		leaf := &Node{Move: mv}
 		miniMax(g, leaf, depth-1, eval)
 		g.UnMove()
@@ -52,6 +49,7 @@ func maximizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 		// n.AddLeaf(leaf)
 
 		bestMove = Max(bestMove, leaf)
+		mv, ok = mg.Next()
 	}
 	n.Score = bestMove.Score
 	return bestMove
@@ -60,11 +58,8 @@ func maximizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 func minimizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
 	var bestMove *Node
-	for {
-		mv := mg.Next()
-		if mv == nil {
-			break
-		}
+	mv, ok := mg.Next()
+	for ok {
 		leaf := &Node{Move: mv}
 		miniMax(g, leaf, depth-1, eval)
 		g.UnMove()
@@ -72,6 +67,7 @@ func minimizingPlayer(g *game.GameState, n *Node, depth int, eval ifaces.Evaluat
 		// n.AddLeaf(leaf)
 
 		bestMove = Min(bestMove, leaf)
+		mv, ok = mg.Next()
 	}
 	n.Score = bestMove.Score
 	return bestMove

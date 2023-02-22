@@ -1,0 +1,32 @@
+TypeB: depth 5, breadth: 10, 7, 5, 3, 2, 1
+
+ 60.7ms typeb_mat  200.0 x 0.0  random           39µs   :  16s
+ 59.6ms typeb_mat  197.0 x 3.0  randcapt         38µs   :  19.8s
+ 59.1ms typeb_mat  105.0 x 95.0 alphabetaII_mat  1.4ms  :  31.7s
+166.4ms typeb      123.5 x 76.5 alphabetaII      6.5ms  :  1m26s
+ 72.7ms typeb_psqt 122.5 x 77.5 alphabetaII_psqt 2.8ms  :  37.9s
+
+TypeB: depth 5, breadth: 5, 5, 3, 3, 2, 2
+13.5ms typeb_mat  199.0 x 1.0   random 42.136µs             :  3.4s
+13.6ms typeb_mat  194.0 x 6.0   randcapt 38.536µs           :  4.5s
+13.9ms typeb_mat   65.0 x 135.0 alphabetaII_mat 1.608637ms  :  6.9s
+31.9ms typeb       75.0 x 125.0 alphabetaII 6.358663ms      :  16.6s
+15.9ms typeb_psqt  74.5 x 125.5 alphabetaII_psqt 3.135062ms :  8.5s
+
+TypeB: depth 5, breadth: 15, 15, 9, 9, 7, 5 (Mac Hack)
+869ms typeb_mat  200.0 x 0.0  random           50µs  : 3m52s
+928ms typeb_mat  200.0 x 0.0  randcapt         54µs  : 4m35s
+1.01s typeb_mat  156.5 x 43.5 alphabetaII_mat  1.7ms : 9m20s
+ 3.5s typeb      174.0 x 26.0 alphabetaII      8.5ms : 28m40s
+1.22s typeb_psqt 172.0 x 28.0 alphabetaII_psqt 3ms   : 9m33s
+
+
+
+if you consider the average evaluation time for typeB, we're doing
+much much slower than alphabeta, however, when both are on depth 5:
+
+1.15s typeb_psqt 174.5 x 25.5 alphabetaIV_psqt 162.5ms : 9m55s
+1.13s typeb_psqt 172.0 x 28.0 alphabetaIV_psqt 150.8ms : 9m45s
+
+after optimizations:
+    835ms typeb_psqt 171.0 x 29.0 alphabetaIV_psqt 93.2ms  : 7m

@@ -14,6 +14,7 @@ import (
 	"chess/searches/quiescence"
 	"chess/searches/randcapt"
 	"chess/searches/random"
+	"chess/searches/typeB"
 )
 
 var AllEngines = map[string]Engine{
@@ -54,6 +55,10 @@ var AllEngines = map[string]Engine{
 	"quiescenceIII":      QuiescenceIII,
 	"quiescenceIII_psqt": QuiescenceIII_Psqt,
 	"quiescenceIII_mat":  QuiescenceIII_Mat,
+
+	"typeb":      TypeB,
+	"typeb_mat":  TypeB_Mat,
+	"typeb_psqt": TypeB_Psqt,
 }
 
 var Random Engine = &BasicEngine{
@@ -294,4 +299,28 @@ var QuiescenceIII_Psqt Engine = &IntermediateEngine{
 	Eval:     psqt.Evaluate,
 	Depth:    4,
 	ExtDepth: 10,
+}
+
+var TypeB Engine = &TypeBEngine{
+	Name:    "typeb",
+	Search:  typeB.BestMove,
+	Eval:    custom.Evaluate,
+	Depth:   5,
+	Breadth: []int{5, 7, 9, 9, 15, 15},
+}
+
+var TypeB_Mat Engine = &TypeBEngine{
+	Name:    "typeb_mat",
+	Search:  typeB.BestMove,
+	Eval:    material.Evaluate,
+	Depth:   5,
+	Breadth: []int{5, 7, 9, 9, 15, 15},
+}
+
+var TypeB_Psqt Engine = &TypeBEngine{
+	Name:    "typeb_psqt",
+	Search:  typeB.BestMove,
+	Eval:    psqt.Evaluate,
+	Depth:   5,
+	Breadth: []int{5, 7, 9, 9, 15, 15},
 }

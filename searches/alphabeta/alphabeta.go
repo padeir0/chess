@@ -11,10 +11,10 @@ import (
 var _ ifaces.BasicSearch = BestMove
 var _ = fmt.Sprintf("please stop bothering me, Go")
 
-func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) *game.Move {
+func BestMove(g *game.GameState, eval ifaces.Evaluator, depth int) game.Move {
 	nodes = 0
 	n := &Node{
-		Move:  game.NullMove,
+		Move:  *game.NullMove,
 		Score: 314159,
 	}
 	newG := g.Copy()
@@ -45,12 +45,12 @@ func alphabeta(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifac
 
 func maximizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
-	mv := mg.Next()
-	if mv == nil {
+	mv, ok := mg.Next()
+	if !ok {
 		panic("nil move!!")
 	}
 	var alphaMove *Node
-	for mv != nil {
+	for ok {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, depth-1, eval)
 		g.UnMove()
@@ -63,7 +63,7 @@ func maximizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, ev
 			alpha = leaf.Score
 			alphaMove = leaf
 		}
-		mv = mg.Next()
+		mv, ok = mg.Next()
 	}
 	n.Score = alpha
 	return alphaMove
@@ -71,12 +71,12 @@ func maximizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, ev
 
 func minimizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, eval ifaces.Evaluator) *Node {
 	mg := movegen.NewMoveGenerator(g)
-	mv := mg.Next()
-	if mv == nil {
+	mv, ok := mg.Next()
+	if !ok {
 		panic("nil move!!")
 	}
 	var betaMove *Node
-	for mv != nil {
+	for ok {
 		leaf := &Node{Move: mv}
 		alphabeta(g, leaf, alpha, beta, depth-1, eval)
 		g.UnMove()
@@ -89,7 +89,7 @@ func minimizingPlayer(g *game.GameState, n *Node, alpha, beta int, depth int, ev
 			beta = leaf.Score
 			betaMove = leaf
 		}
-		mv = mg.Next()
+		mv, ok = mg.Next()
 	}
 	n.Score = beta
 	return betaMove
