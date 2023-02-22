@@ -65,12 +65,15 @@ func (this *MoveGenerator) Next() (game.Move, bool) {
 			ok, capture := this.g.Move(this.pseudoLegal.From, to)
 			if ok {
 				move := game.Move{
-					Piece:   piece,
-					From:    this.pseudoLegal.From,
-					To:      to,
-					Capture: capture,
+					Piece: piece,
+					From:  this.pseudoLegal.From,
+					To:    to,
 
 					MovesSinceLastCapture: lastCapt,
+				}
+				if capture != nil {
+					move.Capture = *capture
+					move.HasCapture = true
 				}
 				return move, true
 			}

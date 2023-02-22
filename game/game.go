@@ -433,7 +433,7 @@ var NullMove = &Move{
 		Row:    0,
 		Column: 0,
 	},
-	Capture: nil,
+	HasCapture: false,
 }
 
 // returns if the move was sucessful
@@ -442,22 +442,8 @@ func (this *GameState) Move(from, to Point) (bool, *Slot) {
 	if this.IsOver {
 		return false, nil
 	}
-	// so we can restore this counter on UnMoves
-	movesSinceLastCapt := this.MovesSinceLastCapture
 	if from == to { // passing turn (null move)
-		previous, ok := this.Moves.Top()
-		if ok && previous.IsPass() {
-			this.IsOver = true
-			this.Result = rs.Draw
-			this.Reason = "Both players passed turn"
-		}
-		null := *NullMove
-		this.MovesSinceLastCapture++
-		null.MovesSinceLastCapture = movesSinceLastCapt
-
-		this.Moves.Push(null)
-		this.BlackTurn = !this.BlackTurn
-		return true, nil
+		return false, nil
 	}
 	fromPiece := this.Board.AtPos(from)
 	if fromPiece.IsWhite() == this.BlackTurn {
@@ -468,11 +454,20 @@ func (this *GameState) Move(from, to Point) (bool, *Slot) {
 	if !ok {
 		return false, nil
 	}
-
 	piece := this.Board.AtPos(from)
+	move := Move{
+		Piece:      piece,
+		From:       from,
+		To:         to,
+		HasCapture: false,
+
+		MovesSinceLastCapture: this.MovesSinceLastCapture,
+	}
 
 	if capture != nil {
 		this.Board.Pop(capture.Pos)
+		move.Capture = *capture
+		move.HasCapture = true
 		if capture.Piece == pc.BlackKing {
 			this.IsOver = true
 			this.Result = rs.WhiteWins
@@ -492,7 +487,6 @@ func (this *GameState) Move(from, to Point) (bool, *Slot) {
 		}
 	}
 
-	oldpiece := piece
 	if canPromote(this, piece, to) {
 		piece = promote(piece.IsBlack())
 	}
@@ -501,14 +495,7 @@ func (this *GameState) Move(from, to Point) (bool, *Slot) {
 
 	this.updatePieceTable(piece, capture, from, to)
 
-	this.Moves.Push(Move{
-		Piece:   oldpiece,
-		From:    from,
-		To:      to,
-		Capture: capture,
-
-		MovesSinceLastCapture: movesSinceLastCapt,
-	})
+	this.Moves.Push(move)
 	this.BlackTurn = !this.BlackTurn
 	return true, capture
 }
@@ -548,18 +535,68 @@ func (g *GameState) IsValidMove(from, to Point) (bool, *Slot) {
 }
 
 func (this *GameState) IsAttacked(pos Point, isBlack bool) bool {
-	attackers := &this.BlackPieces
+	pawn, knight, bishop, rook, queen, king := pc.BlackPieces()
+	pawnCaptureOffsets := BlackPawnCaptureOffsets
 	if isBlack {
-		attackers = &this.WhitePieces
+		pawnCaptureOffsets = WhitePawnCaptureOffsets
+		pawn, knight, bishop, rook, queen, king = pc.WhitePieces()
 	}
 
-	for _, slot := range *attackers {
-		if slot.IsInvalid() {
+	if this.simpleAttack(pos, HorsieOffsets, knight) {
+		return true
+	}
+	if this.simpleAttack(pos, KingOffsets, king) {
+		return true
+	}
+
+	if this.slidingAttack(pos, RookOffsets, rook, queen) {
+		return true
+	}
+	if this.slidingAttack(pos, BishopOffsets, bishop, queen) {
+		return true
+	}
+
+	if this.simpleAttack(pos, pawnCaptureOffsets, pawn) {
+		return true
+	}
+
+	return false
+}
+
+func (this *GameState) simpleAttack(pos Point, offsets []Point, attacker pc.Piece) bool {
+	for _, offset := range offsets {
+		newpos := Point{
+			Column: pos.Column + offset.Column,
+			Row:    pos.Row + offset.Row,
+		}
+		if newpos.IsInvalid() {
 			continue
 		}
-		ok, capture := this.IsValidMove(slot.Pos, pos)
-		if ok && capture != nil && capture.Pos == pos {
+		piece := this.Board.AtPos(newpos)
+		if piece == attacker {
 			return true
+		}
+	}
+	return false
+}
+
+func (this *GameState) slidingAttack(pos Point, offsets []Point, attacker1, attacker2 pc.Piece) bool {
+	for _, offset := range offsets {
+		for i := 1; i <= 7; i++ {
+			newpos := Point{
+				Column: pos.Column + (offset.Column * i),
+				Row:    pos.Row + (offset.Row * i),
+			}
+			if newpos.IsInvalid() {
+				break
+			}
+			piece := this.Board.AtPos(newpos)
+			if piece != pc.Empty {
+				if piece == attacker1 || piece == attacker2 {
+					return true
+				}
+				break
+			}
 		}
 	}
 	return false
@@ -621,14 +658,14 @@ func (this *GameState) updatePieceTable(piece pc.Piece, capture *Slot, from, to 
 	}
 }
 
-func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to Point) {
+func (this *GameState) unmakeTableUpdate(piece pc.Piece, hasCapture bool, capture Slot, from, to Point) {
 	if piece == pc.BlackKing {
 		this.BlackKingPosition = from
 	}
 	if piece == pc.WhiteKing {
 		this.WhiteKingPosition = from
 	}
-	if capture != nil && !capture.Piece.IsPawnLike() {
+	if hasCapture && !capture.Piece.IsPawnLike() {
 		this.TotalValuablePieces += 1
 	}
 	if piece.IsWhite() {
@@ -640,7 +677,7 @@ func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to
 			}
 		}
 		// update capture
-		if capture != nil {
+		if hasCapture {
 			if capture.Piece == pc.BlackKing {
 				this.BlackKingPosition = capture.Pos
 			}
@@ -664,7 +701,7 @@ func (this *GameState) unmakeTableUpdate(piece pc.Piece, capture *Slot, from, to
 			}
 		}
 		// update capture
-		if capture != nil {
+		if hasCapture {
 			if capture.Piece == pc.WhiteKing {
 				this.WhiteKingPosition = capture.Pos
 			}
@@ -686,9 +723,9 @@ func (this *GameState) UnMove() {
 	if !ok {
 		return
 	}
-	this.unmakeTableUpdate(mv.Piece, mv.Capture, mv.From, mv.To)
+	this.unmakeTableUpdate(mv.Piece, mv.HasCapture, mv.Capture, mv.From, mv.To)
 	this.Board.Pop(mv.To)
-	if mv.Capture != nil {
+	if mv.HasCapture {
 		this.Board.SetPos(mv.Capture.Pos, mv.Capture.Piece)
 	}
 	this.Board.SetPos(mv.From, mv.Piece)
@@ -809,8 +846,8 @@ func isValidBishopMove(g *GameState, from, to Point) (bool, *Slot) {
 		return false, nil
 	}
 
-	posInWay := bishop_ClosestPieceInWay(g, from, to)
-	if posInWay != nil && *posInWay != to {
+	posInWay, found := bishop_ClosestPieceInWay(g, from, to)
+	if found && posInWay != to {
 		// piece in way
 		return false, nil
 	}
@@ -818,7 +855,7 @@ func isValidBishopMove(g *GameState, from, to Point) (bool, *Slot) {
 	fromPiece := g.Board.AtPos(from)
 	toPiece := g.Board.AtPos(to)
 	var capture *Slot = nil
-	if posInWay != nil && *posInWay == to {
+	if found && posInWay == to {
 		if fromPiece.IsBlack() == toPiece.IsBlack() {
 			// friendly piece in spot
 			return false, nil
@@ -910,7 +947,7 @@ diagonals only (bishop-like)
 	 # #      (3, 2) (3, 4)
 	#   #  (4, 1)        (4, 5)
 */
-func bishop_ClosestPieceInWay(g *GameState, from, to Point) *Point {
+func bishop_ClosestPieceInWay(g *GameState, from, to Point) (Point, bool) {
 	rowQuant := 1
 	if from.Row > to.Row {
 		rowQuant = -1
@@ -931,12 +968,12 @@ func bishop_ClosestPieceInWay(g *GameState, from, to Point) *Point {
 	for currPos != destPos {
 		piece := g.Board.AtPos(currPos)
 		if piece != pc.Empty {
-			return &currPos
+			return currPos, true
 		}
 		currPos.Row += rowQuant
 		currPos.Column += colQuant
 	}
-	return nil
+	return Point{}, false
 }
 
 /*
@@ -997,16 +1034,18 @@ func Abs(a int32) int32 {
 }
 
 type Move struct {
-	Piece   pc.Piece
-	From    Point
-	To      Point
-	Capture *Slot
+	Piece pc.Piece
+	From  Point
+	To    Point
+
+	Capture    Slot
+	HasCapture bool
 
 	MovesSinceLastCapture int
 }
 
 func (this *Move) String() string {
-	if this.Capture != nil {
+	if this.HasCapture {
 		return this.Piece.String() +
 			this.From.String() + this.To.String() +
 			"x" + this.Capture.Piece.String()
@@ -1017,6 +1056,13 @@ func (this *Move) String() string {
 
 func (this *Move) IsPass() bool {
 	return this.From == this.To
+}
+
+var BlackPawnCaptureOffsets = []Point{
+	{-1, -1}, {-1, 1},
+}
+var WhitePawnCaptureOffsets = []Point{
+	{1, -1}, {1, 1},
 }
 
 var KingOffsets = []Point{

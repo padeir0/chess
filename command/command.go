@@ -593,7 +593,7 @@ func checkErr(layout string) *Error {
 
 func isValidShow(s string) bool {
 	switch s {
-	case "moves", "attacks":
+	case "moves", "attacks", "attacked", "defended":
 		return true
 	}
 	return false

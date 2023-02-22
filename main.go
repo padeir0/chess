@@ -170,6 +170,10 @@ func evalShow(cli *cliState, cmd *xcmd.Command) {
 		mvs := seggen.ConsumeAllCaptures(mgen)
 		hls := game.MoveToHighlight(mvs)
 		fmt.Println(cli.Curr.Board.Show(hls))
+	case "attacked":
+		showAttacked(cli)
+	case "defended":
+		showDefended(cli)
 	default:
 		warn("unimplemented")
 	}
@@ -266,23 +270,33 @@ var duels = []duel{
 	//{engines.Minimax, engines.RandCapt},
 	//{engines.Minimax, engines.MinimaxII},
 
-	//{engines.AlphaBeta, engines.RandCapt},
-	//{engines.AlphaBeta, engines.AlphaBeta_Mat},
-	//{engines.AlphaBeta, engines.AlphaBeta_Psqt},
-	//{engines.AlphaBetaII, engines.AlphaBeta},
-	//{engines.AlphaBetaIII, engines.AlphaBetaII},
+	{engines.AlphaBeta_Mat, engines.RandCapt},
+	{engines.AlphaBeta_Psqt, engines.RandCapt},
+	{engines.AlphaBeta, engines.RandCapt},
 
-	{engines.Quiescence, engines.AlphaBeta},
-	{engines.Quiescence_Mat, engines.AlphaBeta_Mat},
-	{engines.Quiescence_Psqt, engines.AlphaBeta_Psqt},
+	{engines.AlphaBeta_Mat, engines.AlphaBetaII_Mat},
+	{engines.AlphaBeta_Mat, engines.AlphaBetaIII_Mat},
+	{engines.AlphaBetaII_Mat, engines.AlphaBetaIII_Mat},
+	{engines.AlphaBetaIII_Mat, engines.AlphaBetaIV_Mat},
+	{engines.AlphaBetaIV_Mat, engines.AlphaBetaV_Mat},
 
-	{engines.QuiescenceII, engines.AlphaBetaII},
-	{engines.QuiescenceII_Mat, engines.AlphaBetaII_Mat},
-	{engines.QuiescenceII_Psqt, engines.AlphaBetaII_Psqt},
+	{engines.AlphaBeta_Psqt, engines.AlphaBetaII_Psqt},
+	{engines.AlphaBeta_Psqt, engines.AlphaBetaIII_Psqt},
+	{engines.AlphaBetaII_Psqt, engines.AlphaBetaIII_Psqt},
+	{engines.AlphaBetaIII_Psqt, engines.AlphaBetaIV_Psqt},
+	{engines.AlphaBetaIV_Psqt, engines.AlphaBetaV_Psqt},
 
-	{engines.QuiescenceIII, engines.AlphaBetaIII},
-	{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Mat},
-	{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Psqt},
+	//{engines.Quiescence, engines.AlphaBeta},
+	//{engines.Quiescence_Mat, engines.AlphaBeta_Mat},
+	//{engines.Quiescence_Psqt, engines.AlphaBeta_Psqt},
+
+	//{engines.QuiescenceII, engines.AlphaBetaII},
+	//{engines.QuiescenceII_Mat, engines.AlphaBetaII_Mat},
+	//{engines.QuiescenceII_Psqt, engines.AlphaBetaII_Psqt},
+
+	//{engines.QuiescenceIII, engines.AlphaBetaIII},
+	//{engines.QuiescenceIII_Mat, engines.AlphaBetaIII_Mat},
+	//{engines.QuiescenceIII_Psqt, engines.AlphaBetaIII_Psqt},
 }
 
 func evalChampionship() {
@@ -329,4 +343,46 @@ func test() {
 			fmt.Println("CompareGens failed")
 		}
 	}
+}
+
+func showAttacked(cli *cliState) {
+	pieces := cli.Curr.WhitePieces
+	if cli.Curr.BlackTurn {
+		pieces = cli.Curr.BlackPieces
+	}
+	hls := []game.Highlight{}
+	for _, slot := range pieces {
+		if slot.IsInvalid() {
+			continue
+		}
+		if cli.Curr.IsAttacked(slot.Pos, cli.Curr.BlackTurn) {
+			newhl := game.Highlight{
+				Pos:   slot.Pos,
+				Color: colors.BackgroundMagenta,
+			}
+			hls = append(hls, newhl)
+		}
+	}
+	fmt.Println(cli.Curr.Board.Show(hls))
+}
+
+func showDefended(cli *cliState) {
+	pieces := cli.Curr.WhitePieces
+	if cli.Curr.BlackTurn {
+		pieces = cli.Curr.BlackPieces
+	}
+	hls := []game.Highlight{}
+	for _, slot := range pieces {
+		if slot.IsInvalid() {
+			continue
+		}
+		if cli.Curr.IsAttacked(slot.Pos, !cli.Curr.BlackTurn) {
+			newhl := game.Highlight{
+				Pos:   slot.Pos,
+				Color: colors.BackgroundMagenta,
+			}
+			hls = append(hls, newhl)
+		}
+	}
+	fmt.Println(cli.Curr.Board.Show(hls))
 }

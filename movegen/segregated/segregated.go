@@ -5,8 +5,6 @@ import (
 	"chess/game"
 	pc "chess/game/piece"
 	. "chess/movegen/common"
-
-	"fmt"
 )
 
 var _ Generator = &MoveGenerator{}
@@ -85,24 +83,16 @@ func (this *MoveGenerator) NextCapture() (game.Move, bool) {
 			ok, capture := this.g.Move(slot.Pos, to)
 			if ok && capture != nil {
 				move := game.Move{
-					Piece:   slot.Piece,
-					From:    slot.Pos,
-					To:      to,
-					Capture: capture,
+					Piece:      slot.Piece,
+					From:       slot.Pos,
+					To:         to,
+					Capture:    *capture,
+					HasCapture: true,
 
 					MovesSinceLastCapture: lastCapt,
 				}
 				return move, true
 			} else if ok && capture == nil {
-				fmt.Println(this.g.Board.String())
-				fmt.Println(this.g.Moves)
-				fmt.Println(this.currCaptureSlot, this.currCaptureOffset, this.currPseudoCapture)
-				fmt.Println(slot.Piece, slot.Pos, to, capture)
-				fmt.Println(slot)
-				err := this.g.CheckInvalid()
-				if err != "" {
-					panic(err)
-				}
 				panic("should have captured something")
 			}
 			to, hasMove = this.nextMove(slot.Pos, slot.Piece, false)
@@ -129,21 +119,15 @@ func (this *MoveGenerator) NextQuiet() (game.Move, bool) {
 			ok, capture := this.g.Move(slot.Pos, to)
 			if ok && capture == nil {
 				move := game.Move{
-					Piece:   slot.Piece,
-					From:    slot.Pos,
-					To:      to,
-					Capture: capture,
+					Piece:      slot.Piece,
+					From:       slot.Pos,
+					To:         to,
+					HasCapture: false,
 
 					MovesSinceLastCapture: lastCapt,
 				}
 				return move, true
 			} else if capture != nil {
-				fmt.Println(this.currCaptureSlot, this.currPseudoCapture)
-				fmt.Println(slot.Piece, slot.Pos, to, capture)
-				err := this.g.CheckInvalid()
-				if err != "" {
-					panic(err)
-				}
 				panic("should not have captured something")
 			}
 			to, hasMove = this.nextMove(slot.Pos, slot.Piece, true)

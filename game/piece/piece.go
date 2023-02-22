@@ -125,3 +125,11 @@ const (
 	BlackQueen
 	BlackKing
 )
+
+func BlackPieces() (pawn, knight, bishop, rook, queen, king Piece) {
+	return BlackPawn, BlackKnight, BlackBishop, BlackRook, BlackQueen, BlackKing
+}
+
+func WhitePieces() (pawn, knight, bishop, rook, queen, king Piece) {
+	return WhitePawn, WhiteKnight, WhiteBishop, WhiteRook, WhiteQueen, WhiteKing
+}

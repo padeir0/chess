@@ -197,7 +197,7 @@ type move struct {
 }
 
 func move2move(mv game.Move) move {
-	if mv.Capture != nil {
+	if mv.HasCapture {
 		return move{
 			from:     mv.From,
 			to:       mv.To,

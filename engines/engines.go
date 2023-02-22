@@ -45,6 +45,8 @@ var AllEngines = map[string]Engine{
 	"alphabetaIII_mat":  AlphaBetaIII_Mat,
 	"alphabetaIV_mat":   AlphaBetaIV_Mat,
 	"alphabetaIV_psqt":  AlphaBetaIV_Psqt,
+	"alphabetaV_mat":    AlphaBetaV_Mat,
+	"alphabetaV_psqt":   AlphaBetaV_Psqt,
 
 	"quiescence":         Quiescence,
 	"quiescence_mat":     Quiescence_Mat,
@@ -227,6 +229,20 @@ var AlphaBetaIV_Psqt Engine = &BasicEngine{
 	Search: alphabeta.BestMove,
 	Eval:   psqt.Evaluate,
 	Depth:  5,
+}
+
+var AlphaBetaV_Mat Engine = &BasicEngine{
+	Name:   "alphabetaV_mat",
+	Search: alphabeta.BestMove,
+	Eval:   material.Evaluate,
+	Depth:  6,
+}
+
+var AlphaBetaV_Psqt Engine = &BasicEngine{
+	Name:   "alphabetaV_psqt",
+	Search: alphabeta.BestMove,
+	Eval:   psqt.Evaluate,
+	Depth:  6,
 }
 
 var Quiescence Engine = &IntermediateEngine{

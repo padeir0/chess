@@ -1,0 +1,33 @@
+150µs alphabeta_mat  192.0 x 8.0 randcapt 30µs : 78ms
+228µs alphabeta_psqt 193.0 x 7.0 randcapt 24µs : 95ms
+399µs alphabeta      193.0 x 7.0 randcapt 22µs : 133ms
+
+126µs alphabeta_mat     25.5 x 174.5 alphabetaII_mat  1.4ms : 923ms
+127µs alphabeta_mat     49.0 x 151.0 alphabetaIII_mat 6.4ms : 4.5s
+1.2ms alphabetaII_mat  111.5 x 88.5  alphabetaIII_mat 6.2ms : 5.3s
+6.4ms alphabetaIII_mat  57.5 x 142.5 alphabetaIV_mat  49ms  : 33.6s
+46ms  alphabetaIV_mat  103.5 x 96.5  alphabetaV_mat   241ms : 2m54s
+
+222µs  alphabeta_psqt    16.0 x 184.0 alphabetaII_psqt  2.4ms  : 1.5s
+228µs  alphabeta_psqt    41.0 x 159.0 alphabetaIII_psqt 15ms   : 11.8s
+2.2ms  alphabetaII_psqt  89.0 x 111.0 alphabetaIII_psqt 13.4ms : 11s
+15.7ms alphabetaIII_psqt 82.5 x 117.5 alphabetaIV_psqt  118ms  : 1m20s
+118ms  alphabetaIV_psqt  84.5 x 115.5 alphabetaV_psqt   720ms  : 8m6s
+
+---------------------------------------------------------------------
+
+135µs alphabeta_mat    193.0 x 7.0 randcapt 28µs : 74ms
+222µs alphabeta_psqt   196.0 x 4.0 randcapt 23µs : 92ms
+402µs alphabeta        192.0 x 8.0 randcapt 22µs : 139ms
+
+125µs alphabeta_mat    29.0 x 171.0 alphabetaII_mat  1.3ms : 937ms
+121µs alphabeta_mat    55.0 x 145.0 alphabetaIII_mat 5.7ms : 3.9s
+1.1ms alphabetaII_mat 115.5 x 84.5  alphabetaIII_mat 5.6ms : 4.5s
+6.2ms alphabetaIII_mat 59.0 x 141.0 alphabetaIV_mat  48ms  : 32s
+45ms  alphabetaIV_mat  94.0 x 106.0 alphabetaV_mat   220ms : 2m45s
+
+215µs alphabeta_psqt    17.5 x 182.5 alphabetaII_psqt  2.4ms : 1.5s
+228µs alphabeta_psqt    35.5 x 164.5 alphabetaIII_psqt 14ms  : 11s
+2.2ms alphabetaII_psqt  74.0 x 126.0 alphabetaIII_psqt 13ms  : 10s
+15ms  alphabetaIII_psqt 75.0 x 125.0 alphabetaIV_psqt  117ms : 1m25s
+110ms alphabetaIV_psqt  97.5 x 102.5 alphabetaV_psqt   641ms : 8m35s
